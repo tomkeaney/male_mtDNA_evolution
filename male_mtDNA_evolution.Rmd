@@ -774,7 +774,7 @@ Male_fitness_without_Brownsville <- Male_fitness %>% filter(Focal_haplotype != "
 
 Male_fitness_without_Brownsville$test <- sample(c(0,1), nrow(Male_fitness_without_Brownsville), replace = T)
 
-male_zi_model <- glmmTMB(test ~ Focal_haplotype * Social_haplotype + Social_haplotype * Social_survival + factor(Duplicate) + (1|Block) + (1|Individual), data = Male_fitness_without_Brownsville, family = binomial, ziformula = ~1, na.action = na.fail, REML = FALSE)
+male_zi_model <- glmmTMB(cbind(Focal_male_offspring, Bw_offspring) ~ Focal_haplotype * Social_haplotype + Social_haplotype * Social_survival + factor(Duplicate) + (1|Block) + (1|Individual), data = Male_fitness_without_Brownsville, family = binomial, ziformula = ~., na.action = na.fail, REML = FALSE)
 
 dredge(male_zi_model)
 
