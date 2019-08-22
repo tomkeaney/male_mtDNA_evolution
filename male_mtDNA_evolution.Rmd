@@ -11,10 +11,6 @@ output:
     toc: yes
     toc_float: yes
     code_download: true
-  pdf_document:
-    toc: yes
-  word_document:
-    toc: yes
 subtitle: Supplementary material
 editor_options:
   chunk_output_type: console
@@ -191,21 +187,21 @@ We analysed the data using generalised linear mixed models in the `lmer` package
 
 For the analysis of fitness traits expressed in both sexes (survival, development time and body size), we are interested in the effect of an individual’s focal mtDNA, the mtDNA of a social competitor, the effect of a social competitors success, and the effect of sex on fitness. To identify these potential effects each model contained the following fixed effects, and interactions where biologically relevant:
 
-_Focal haplotype:_ the mtDNA haplotype that an individual carries.
+Focal haplotype: the mtDNA haplotype that an individual carries.
 
-_Social haplotype:_ the mtDNA haplotype that a social partner during larval development carries.
+Social haplotype: the mtDNA haplotype that a social partner during larval development carries.
 
-_Social survival:_ the survival outcome of the social partner.
+Social survival: the survival outcome of the social partner.
 
-_Sex:_ is the focal individual female or male? The social partner will always be of the opposite sex to the focal individual.
+Sex: is the focal individual female or male? The social partner will always be of the opposite sex to the focal individual.
 
 We also include:
 
-_Duplicate:_ Each haplotype has been introgressed alongside the _w^1118^_ nuclear background in two independent duplicates. WIthin each block we ran multiple replicates that were split in two: half used only duplicate one will the other half used only duplicate two. This fixed effect accounts for any nuclear differences that may have arisen between duplicates.
+Duplicate: Each haplotype has been introgressed alongside the _w^1118^_ nuclear background in two independent duplicates. WIthin each block we ran multiple replicates that were split in two: half used only duplicate one will the other half used only duplicate two. This fixed effect accounts for any nuclear differences that may have arisen between duplicates.
 
 **Random effects**
 
-_Block:_ accounts for differences in the response variable between experimental blocks (e.g. to variance in temperature or composition of the fly food). In our experiment a Block contained multiple replicates and a replicate was made up of 25 different cells each housing a pair of larvae.
+Block: accounts for differences in the response variable between experimental blocks (e.g. to variance in temperature or composition of the fly food). In our experiment a Block contained multiple replicates and a replicate was made up of 25 different cells each housing a pair of larvae.
 
 **Model evaluation**
 
@@ -478,6 +474,7 @@ larval_development_plot_data %>%
   scale_colour_manual(values = c("Died as larva" = "#a50f15", "Died as pupa" = "#fe9929", "Survived to adulthood" = "#41b6c4")) +
   geom_point(data = larval_development_summary, aes(x = Social_survival, y = Dev_time), size = 3, colour='black') +
   geom_errorbar(data = larval_development_summary, aes(x = Social_survival, ymax = Upper, ymin = Lower, width = 0), colour = "black") +
+  geom_hline(yintercept = c(238, 262, 286), linetype = 2, colour = "grey", alpha = 0.5) +
   facet_wrap(~ Sex) +
   labs(x = "Survival outcome of social partner", y = "Egg-to-adult development time (hrs)") +
   theme_minimal() +
@@ -486,7 +483,7 @@ larval_development_plot_data %>%
 
 ```
 
-**Figure 3:** Egg-to-adult development time is affected by an individual's sex and the success of a social competitor. The coloured points show the development time for individual flies. The black points show the mean development time for males and females and its 95% confidence limits.
+**Figure 3:** Egg-to-adult development time is affected by an individual's sex and the success of a social competitor. The coloured points show the development time for individual flies. The black points show the mean development time for males and females and its 95% confidence limits. Dashed lines indicate when lights were turned each morning and highlight the relationship between light and eclosion.
 
 ```{r}
 development_mtDNA_summary <- larval_development_plot_data %>% 
@@ -500,7 +497,8 @@ larval_development_plot_data %>%
   scale_colour_manual(values = c("Barcelona" = "#a50f15", "Brownsville" = "#fe9929", "Dahomey" = "#41b6c4", "Israel" = "#238443" , "Sweden" = "#4a1486")) +
   geom_point(data = development_mtDNA_summary, aes(x = Focal_haplotype, y = Dev_time), size = 3, colour='black') +
   geom_errorbar(data = development_mtDNA_summary, aes(x = Focal_haplotype, ymax = Upper, ymin = Lower, width = 0), colour = "black") +
-  labs(x = "Female mtDNA haplotype", y = "Egg-to-adult development time (hrs)") +
+  geom_hline(yintercept = c(238, 262, 286), linetype = 2, colour = "grey", alpha = 0.5) +
+  labs(x = "mtDNA haplotype", y = "Egg-to-adult development time (hrs)") +
   theme_minimal() +
   theme(legend.position = "none") +
   theme(panel.grid.major.x = element_blank())
@@ -679,7 +677,7 @@ pander(female_table, split.cell = 40, split.table = Inf)
 
 #### Model averaging
 
-**Table 4:** Conditional (after hurdle) and zi (zero hurdle requirement) model coefficients, standard error and 95% confidence limits are shown for the female offspring production averaged model. Bold rows indicate signficant effects. 
+**Table 4:** Conditional (after hurdle) and zi (zero-hurdle requirement) model coefficients, standard error and 95% confidence limits are shown for the female offspring production averaged model. Bold rows indicate signficant effects. 
 
 ```{r}
 
@@ -760,7 +758,7 @@ We follow the classic approach to sperm competition analysis and consider male f
 
 Here we are measuring male fitness as 1) the ability of a male to inseminate a female in the presence of another male and 2) the competitive ability of his sperm within females that have been inseminated by another male. Zero-count outcomes can therefore arise due to either structural and sampling zeros (or at least processes that are likely to follow different distributions). We use a zero-inflated binomial model.
 
-The Brownsville haplotype renders males sterile alongside the _w^1118_ nuclear background and sub-fertile alongside all other tested backgrounds. In our experiment, we find that Brownsville males are able to produce offspring but to a very limited capacity. Due to this, our model will not converge with the Brownsville males in the dataset. Therefore, we acknowledge that there is an effect of the Brownsville focal haplotype on male fitness and then remove it from the dataset.
+The Brownsville haplotype renders males sterile alongside the _w^1118^_ nuclear background and sub-fertile alongside all other tested backgrounds. In our experiment, we find that Brownsville males are able to produce offspring but to a very limited capacity. Due to this, our model will not converge with the Brownsville males in the dataset. Therefore, we acknowledge that there is an effect of the Brownsville focal haplotype on male fitness and then remove it from the dataset.
 
 We fit a zero-inflated binomial model:
 
@@ -768,19 +766,53 @@ We fit a zero-inflated binomial model:
 
 We fit 'Individual' as a random effect to ensure that the proportion of offspring is calculated for each mitoline male, rather than as an overall proportion for each group of males. 
 
-**Table S5**: Anova results from zero-inflated binomial model for male reproductive fitness. 
+**Table S5**: Anova results from zero-inflated binomial model for male adult fitness. 
 ```{r, eval=FALSE}
 Male_fitness_without_Brownsville <- Male_fitness %>% filter(Focal_haplotype != "Brownsville") %>% mutate(Individual = 1:n())
 
-Male_fitness_without_Brownsville$test <- sample(c(0,1), nrow(Male_fitness_without_Brownsville), replace = T)
+# Male_fitness_without_Brownsville$test <- sample(c(0,1), nrow(Male_fitness_without_Brownsville), replace = T)
 
-male_zi_model <- glmmTMB(cbind(Focal_male_offspring, Bw_offspring) ~ Focal_haplotype * Social_haplotype + Social_haplotype * Social_survival + factor(Duplicate) + (1|Block) + (1|Individual), data = Male_fitness_without_Brownsville, family = binomial, ziformula = ~., na.action = na.fail, REML = FALSE)
+male_zi_model <- glmmTMB(cbind(Focal_male_offspring, Bw_offspring) ~ Focal_haplotype * Social_haplotype + Social_haplotype * Social_survival + factor(Duplicate) + (1|Block) + (1|Individual), data = Male_fitness_without_Brownsville, family = binomial, ziformula = ~., na.action = na.fail, REML = FALSE, control = glmmTMBControl(optCtrl = list(iter.max = 1000, eval.max = 1000), profile = TRUE, collect = FALSE))
 
 dredge(male_zi_model)
 
-Anova(male_zi_model) %>% pander(split.cell = 40, split.table = Inf)
+# This returns the following error message:
+
+# Error in as.symbol(opt$response) : 'pairlist' object cannot be coerced to type 'symbol'
+
+if(file.exists("male_dredge.rds")){ # If already done, just load the results
+  male_dredge <- readRDS("male_dredge.rds")
+} else {male_dredge <- dredge(male_zi_model) # If not already done, run the dredge and save the results
+lapply(c("male_dredge"), save_it)
+}
+
+Male_table <- subset(male_dredge, delta < 6, recalc.weights = FALSE) %>% as.data.frame()
 
 ```
+
+#### Model averaging
+
+**Table 5:** Conditional (after hurdle) and zi (zero-hurdle requirement) model coefficients, standard error and 95% confidence limits are shown for the male adult fitness averaged model. Bold rows indicate signficant effects. 
+
+```{r, eval=FALSE}
+
+#summary(model.avg(male_dredge, subset = delta < 6))
+
+Male_CIs <- confint(model.avg(male_dredge, subset = delta < 6)) %>% as.data.frame()
+
+Male_estimate <- coefTable(model.avg(male_dredge, subset = delta < 6)) %>% as.data.frame()
+
+Male_model_avg <- data.frame(Male_estimate, Male_CIs) %>% select(Estimate, Std..Error,  X2.5.., X97.5..)
+
+names(Male_model_avg)[names(Male_model_avg) == "Estimate"] <- "Conditional average estimate"
+names(Male_model_avg)[names(Male_model_avg) == "Std..Error"] <- "Standard Error"
+names(Male_model_avg)[names(Male_model_avg) == "X2.5.."] <- "2.5% Interval"
+names(Male_model_avg)[names(Male_model_avg) == "X97.5.."] <- "97.5% Interval"
+
+pander(Male_model_avg, split.cell = 40, split.table = Inf, emphasize.strong.rows = c(5:7, 12))
+
+```
+
 
 
 ```{r, fig.width= 9, fig.height= 4}
