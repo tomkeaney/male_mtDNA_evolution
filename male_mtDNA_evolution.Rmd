@@ -41,7 +41,7 @@ Here we include all code used to run our analysis, our rationale behind the mode
 
 library(lme4) # for the lmer and glmer mixed model functions
 library(lmerTest) # Used to get p-values for lmer models using simulation. It over-writes lmer() with a new version, which gives p-values
-library(glmmTMB) # for zero-inflated glms
+library(glmmTMB) # for zero-inflated or hurdle glms
 library(brms) # for Bayesian models
 library(car) # for type III Anova's
 library(dplyr) # data re-shaping
@@ -172,7 +172,7 @@ Male_fitness <- Male_fitness %>% filter(!(Offspring_counted == 0))
 
 # Select relevant columns and rename variables 
 
-Male_fitness <- select(Male_fitness, Individual, Block, Focal.haplotype, Social.haplotype, Social.Survival,  Mortality, Development.time..hrs., Day.emerged, Wing.size..mm., Hours.from.lights.on, Total.red.all.vials, Total.bw.all.vials, Offspring_counted,  Proportion.red.all.vials, duplicate) %>% 
+Male_fitness <- dplyr::select(Male_fitness, Individual, Block, Focal.haplotype, Social.haplotype, Social.Survival,  Mortality, Development.time..hrs., Day.emerged, Wing.size..mm., Hours.from.lights.on, Total.red.all.vials, Total.bw.all.vials, Offspring_counted,  Proportion.red.all.vials, duplicate) %>% 
   rename(Focal_male_offspring = Total.red.all.vials, Block = Block, Day = Day.emerged, Hours = Hours.from.lights.on, Survived = Mortality, Focal_haplotype = Focal.haplotype, Social_haplotype = Social.haplotype, Social_survival = Social.Survival, Dev_time = Development.time..hrs., Wing_length = Wing.size..mm., Proportion_focal = Proportion.red.all.vials, Bw_offspring = Total.bw.all.vials, Duplicate = duplicate) %>% 
   filter(!is.na(Social_survival))
 
@@ -205,7 +205,7 @@ Block: accounts for differences in the response variable between experimental bl
 
 **Model evaluation**
 
-Each model was evaluated via AICc values using the `dredge` function, from the `Mumin` package . There was rarely a single model that was unequivocally the best fit to the data, so we conducted model averaging for the set of models where delta was < 6, as suggested by Symonds and Moussalli [-@RN455]. The present study is a planned experiment to measure the effect of mtDNA on fitness, so we derived model estimates from the conditional model averages.
+Each model was evaluated via AICc values using the `dredge` function, from the `Mumin` package. There was rarely a single model that was unequivocally the best fit to the data, so we conducted model averaging for the set of models where delta was < 6, as suggested by Symonds and Moussalli [-@RN455]. The present study is a planned experiment to measure the effect of mtDNA on fitness, so we derived model estimates from the conditional model averages.
 
 
 ## Larval fitness measures
@@ -769,6 +769,14 @@ We fit 'Individual' as a random effect to ensure that the proportion of offsprin
 **Table S5**: Anova results from zero-inflated binomial model for male adult fitness. 
 ```{r, eval=FALSE}
 Male_fitness_without_Brownsville <- Male_fitness %>% filter(Focal_haplotype != "Brownsville") %>% mutate(Individual = 1:n())
+
+# The data follows an unusual distribution; see plot below.
+
+hist(Male_fitness_without_Brownsville$Proportion_focal)
+
+# A zero-one inflated beta distribution is appropriate here; see https://www.theanalysisfactor.com/zero-one-inflated-beta-models-for-proportion-data/
+
+# We can use gamlss or a bayesian method
 
 # Male_fitness_without_Brownsville$test <- sample(c(0,1), nrow(Male_fitness_without_Brownsville), replace = T)
 
