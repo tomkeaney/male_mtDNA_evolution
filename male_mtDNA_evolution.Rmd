@@ -640,14 +640,14 @@ The model:
 
 ```{r}
 
-female_hurdle_model <- glmmTMB(Maternal_total_offspring ~ Focal_haplotype * Social_haplotype + factor(Duplicate) + (1|Block) + (1|Pipette_tip), data = female_reproductive_output, family = list(family="truncated_nbinom1",link="log"), ziformula = ~., na.action = na.fail, REML = FALSE)
+female_hurdle_model <- glmmTMB(Maternal_total_offspring ~ Focal_haplotype * Social_haplotype + factor(Duplicate) + (1|Block), data = female_reproductive_output, family = list(family="truncated_nbinom1",link="log"), ziformula = ~., na.action = na.fail, REML = FALSE)
 
 ```
 
-#### Model evaluation _(the dredge is screwed)_
+#### Model evaluation
 
-**Table S4**: Evaluation of the female reproductive output model. All possible models were evaluated from the global model that included a three-way interaction between focal haplotype, social haplotype and social survival, the standalone fixed effect 'duplicate', and the random factor 'Block'. As there was no clear top model, the final model was calculated via model averaging. The zero-inflated results correspond to question (1), while the conditional results correspond to question (2) above.
-```{r, eval= FALSE}
+**Table S4**: Evaluation of the female reproductive output model. All possible models were evaluated from the global model that included an interaction between focal haplotype and social haplotype, the standalone fixed effect 'duplicate', and the random factor 'Block'. As there was no clear top model, the final model was calculated via model averaging. The zero-inflated results correspond to question (1), while the conditional results correspond to question (2) above.
+```{r}
 # Compare all possible combinations of models (from the global model)
 
 if(file.exists("female_dredge.rds")){ # If already done, just load the results
@@ -698,7 +698,7 @@ names(Female_model_avg)[names(Female_model_avg) == "Std..Error"] <- "Standard Er
 names(Female_model_avg)[names(Female_model_avg) == "X2.5.."] <- "2.5% Interval"
 names(Female_model_avg)[names(Female_model_avg) == "X97.5.."] <- "97.5% Interval"
 
-pander(Female_model_avg, split.cell = 40, split.table = Inf, emphasize.strong.rows = c(5:7, 12))
+pander(Female_model_avg, split.cell = 40, split.table = Inf, emphasize.strong.rows = c(2, 5, 10))
 
 ```
 
@@ -766,22 +766,25 @@ The Brownsville haplotype renders males sterile alongside the _w^1118^_ nuclear 
 
 We fit a zero-inflated binomial model:
 
-**(focal_male_offspring, Offspring_counted) ~ Focal_haplotype * Social_haplotype + Social_haplotype * Social_survival + Duplicate + (1|Individual) + (1|Block)**
+**(focal_male_offspring, Offspring_counted) ~ Focal_haplotype * Social_haplotype + Duplicate + (1|Individual) + (1|Block)**
 
 We fit 'Individual' as a random effect to ensure that the proportion of offspring is calculated for each mitoline male, rather than as an overall proportion for each group of males. 
 
-**Table S5**: Anova results from zero-inflated binomial model for male adult fitness. 
-```{r, eval=FALSE}
+```{r}
 Male_fitness_without_Brownsville <- Male_fitness %>% filter(Focal_haplotype != "Brownsville") %>% mutate(Individual = 1:n())
 
 response <- cbind(Male_fitness_without_Brownsville$Focal_male_offspring, Male_fitness_without_Brownsville$Bw_offspring)
 
-male_zi_model <- glmmTMB(response ~ Focal_haplotype * Social_haplotype + factor(Duplicate), data = Male_fitness_without_Brownsville, family = binomial, zi= ~., na.action = na.fail, REML = FALSE, control = glmmTMBControl(optCtrl = list(iter.max = 1000, eval.max = 1000), profile = TRUE, collect = FALSE))
+male_zi_model <- glmmTMB(response ~ Focal_haplotype * Social_haplotype + factor(Duplicate) + (1|Block) + (1|Individual), data = Male_fitness_without_Brownsville, family = binomial, zi= ~., na.action = na.fail, REML = FALSE, control = glmmTMBControl(optCtrl = list(iter.max = 1000, eval.max = 1000), profile = TRUE, collect = FALSE))
+
+```
 
 
-male_zi_model <- glmmTMB(response ~ Focal_haplotype + Social_haplotype + factor(Duplicate) + (1|Block) + (1|Individual), data = Male_fitness_without_Brownsville, family = binomial, zi= ~., na.action = na.fail, REML = FALSE, control = glmmTMBControl(optCtrl = list(iter.max = 1000, eval.max = 1000), profile = TRUE, collect = FALSE))
+#### Model evaluation
 
-male_zi_model <- glmmTMB(response ~ Focal_haplotype + Social_haplotype * Social_survival + factor(Duplicate) + (1|Block) + (1|Individual), data = Male_fitness_without_Brownsville, family = binomial, ziformula = ~., na.action = na.fail, REML = FALSE, control = glmmTMBControl(optCtrl = list(iter.max = 1000, eval.max = 1000), profile = TRUE, collect = FALSE))
+**Table S4**: Evaluation of the male adult fitness model. All possible models were evaluated from the global model that included an interaction between focal haplotype and social haplotype, the standalone fixed effect 'duplicate', and the random factors 'Block' and 'Individual'. As there was no clear top model, the final model was calculated via model averaging.
+```{r}
+# Compare all possible combinations of models (from the global model)
 
 if(file.exists("male_dredge.rds")){ # If already done, just load the results
   male_dredge <- readRDS("male_dredge.rds")
@@ -791,13 +794,33 @@ lapply(c("male_dredge"), save_it)
 
 Male_table <- subset(male_dredge, delta < 6, recalc.weights = FALSE) %>% as.data.frame()
 
+names(Male_table)[names(Male_table) == "cond((Int))"] <- "Conditional intercept"
+names(Male_table)[names(Male_table) == "zi((Int))"] <- "Zero-inflated intercept"
+names(Male_table)[names(Male_table) == "disp((Int))"] <- "Dispersion factor intercept"
+names(Male_table)[names(Male_table) == "cond(factor(duplicate))"] <- "Conditional (Duplicate)"
+names(Male_table)[names(Male_table) == "cond(Focal_haplotype)"] <- "Conditional (Focal haplotype)"
+names(Male_table)[names(Male_table) == "cond(Social_haplotype)"] <- "Conditional (Social haplotype)"
+names(Male_table)[names(Male_table) == "cond(Focal_haplotype:Social_haplotype)"] <- "Conditional (Focal haplotype x Social haplotype)"
+names(Male_table)[names(Male_table) == "zi(factor(duplicate))"] <- "Zero-inflated (Duplicate)"
+names(Male_table)[names(Male_table) == "zi(Focal_haplotype)"] <- "Zero-inflated (Focal haplotype)"
+names(Male_table)[names(Male_table) == "zi(Social_haplotype)"] <- "Zero-inflated (Social haplotype)"
+names(Male_table)[names(Male_table) == "zi(Focal_haplotype:Social_haplotype)"] <- "Zero-inflated (Focal haplotype x Social haplotype)"
+names(Male_table)[names(Male_table) == "df"] <- "Degrees of freedom"
+names(Male_table)[names(Male_table) == "logLik"] <- "Log likelihood"
+names(Male_table)[names(Male_table) == "AICc"] <- "AICc"
+names(Male_table)[names(Male_table) == "delta"] <- "Delta"
+names(Male_table)[names(Male_table) == "weight"] <- "Weight"
+
+pander(Male_table, split.cell = 40, split.table = Inf)
+
 ```
+
 
 #### Model averaging
 
 **Table 5:** Conditional (after hurdle) and zi (zero-hurdle requirement) model coefficients, standard error and 95% confidence limits are shown for the male adult fitness averaged model. Bold rows indicate signficant effects. 
 
-```{r, eval=FALSE}
+```{r}
 
 #summary(model.avg(male_dredge, subset = delta < 6))
 
@@ -812,13 +835,69 @@ names(Male_model_avg)[names(Male_model_avg) == "Std..Error"] <- "Standard Error"
 names(Male_model_avg)[names(Male_model_avg) == "X2.5.."] <- "2.5% Interval"
 names(Male_model_avg)[names(Male_model_avg) == "X97.5.."] <- "97.5% Interval"
 
-pander(Male_model_avg, split.cell = 40, split.table = Inf, emphasize.strong.rows = c(5:7, 12))
+pander(Male_model_avg, split.cell = 40, split.table = Inf, emphasize.strong.rows = c(3, 6, 7, 9, 10, 12:15, 17, 19, 20))
 
 ```
 
 
+```{r}
+male_zi_plot_data <- Male_fitness %>%
+  mutate(Binary_paternal_offspring = ifelse(Focal_male_offspring > 0, "1", "0"))
 
-```{r, fig.width= 9, fig.height= 4}
+male_zi_summary <- male_zi_plot_data %>% 
+  dplyr::group_by(Social_haplotype) %>%
+  dplyr::summarise(number_producing_offspring = sum(Binary_paternal_offspring == 1), number_zero_offspring = sum(Binary_paternal_offspring == 0)) %>%
+  as.data.frame()
+
+male_zi_CIs <- get_CIs_for_binomial_trials(male_zi_summary$number_producing_offspring, male_zi_summary$number_zero_offspring) %>% rename(Binary_paternal_offspring = Proportion)
+
+male_zi_summary <- cbind(male_zi_summary, male_zi_CIs)
+
+male_zi_plot_data %>%
+  ggplot(aes(x = Social_haplotype, y = Binary_paternal_offspring, fill = Social_haplotype, colour = Social_haplotype)) +
+  geom_point(data = male_zi_summary, aes(x = Social_haplotype, y = Binary_paternal_offspring), size = 3, colour='black') +
+  geom_errorbar(data = male_zi_summary, aes(x = Social_haplotype, ymax = upperCI, ymin = lowerCI, width = 0), colour = "black") +
+  labs(x = "Social female mtDNA haplotype", y = "Proportion of males producing offspring") +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  theme(panel.grid.major.x = element_blank())
+```
+
+**Figure 8:** The proportion of males successfully producing offspring is affected by the mtDNA of a social female competitor during larval development. Black points show the mean for each social haplotype and associated confidence intervals. Data corresponds to the zero-inflated (binomial) component of the hurdle model.
+
+```{r}
+
+male_cond_plot_data <- Male_fitness %>% 
+  filter(Focal_male_offspring != 0)
+
+male_cond_summary <- male_cond_plot_data %>% 
+  dplyr::group_by(Social_haplotype) %>%
+  dplyr::summarise(Social_partner_offspring = sum(Focal_male_offspring), Standard_competitor_offspring = sum(Bw_offspring)) %>%
+  as.data.frame()
+
+male_cond_summary <- male_cond_plot_data %>% 
+  group_by(Social_haplotype) %>%
+  dplyr::summarise(Mean_proportion_focal = sum(Proportion_focal) / length(Proportion_focal), Lower = (Mean_proportion_focal - SE(Proportion_focal)* 1.96), Upper = (Mean_proportion_focal + SE(Proportion_focal)*1.96), n = n()) %>% rename(Proportion_focal = Mean_proportion_focal)
+
+Male_cond_plot <- male_cond_plot_data %>%
+  ggplot(aes(x = Social_haplotype, y = Proportion_focal, fill = Social_haplotype, colour = Social_haplotype)) +
+  geom_quasirandom(data = male_cond_plot_data, width = 0.3, alpha =  0.5, aes(size = Offspring_counted)) +
+  scale_size_continuous(range = c(0.5, 6), labels = NULL, breaks = c(20, 40, 60, 80, 100, 120)) +
+  scale_colour_manual(values = c("Barcelona" = "#a50f15", "Brownsville" = "#fe9929", "Dahomey" = "#41b6c4", "Israel" = "#238443" , "Sweden" = "#4a1486")) +
+  geom_point(data = male_cond_summary, aes(x = Social_haplotype, y = Proportion_focal), size = 3, colour='black') +
+  geom_errorbar(data = male_cond_summary, aes(x = Social_haplotype, ymax = Upper, ymin = Lower, width = 0), colour = "black") +
+  labs(x = "Social mtDNA haplotype", y = "Proportion of offspring sired by focal male") +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  theme(panel.grid.major.x = element_blank())
+
+Male_cond_plot
+
+```
+
+**Figure 9:** Male reproductive success relative to a standard _bw_ competitor is affected by the mtDNA of a social female competitor during larval development. Black points show the mean for each social haplotype and associated confidence intervals. Coloured points show individual males; the size of the point represents the number of offspring produced by both competitors. Data corresponds to the conditional component component of the zero-inflated model.
+
+```{r, fig.width= 9, fig.height= 4, eval=FALSE}
 
 male_plot_data <- Male_fitness %>% 
   mutate(Social_survival = replace(as.character(Social_survival), Social_survival == "L", "Died as larva"),
@@ -861,9 +940,11 @@ Male_social_plot <- male_plot_data %>%
 
 ggarrange(Male_focal_plot, Male_social_plot)
 
+
+# **Figure 8:** The proportion of offspring produced by focal males competing with standard _bw_ males, split by a) the males mtDNA haplotype and b) the mtDNA haplotype of a social competitor during development. Coloured points represent individual males, with larger points indicating a high number of offspring produced in the vial (sired by either male). Black points show the mean proportion of offspring sired by the focal male, with asssociated 95% confidence intervals. **Means are not adjusted for zero inflation**. 
+
 ```
 
-**Figure 8:** The proportion of offspring produced by focal males competing with standard _bw_ males, split by a) the males mtDNA haplotype and b) the mtDNA haplotype of a social competitor during development. Coloured points represent individual males, with larger points indicating a high number of offspring produced in the vial (sired by either male). Black points show the mean proportion of offspring sired by the focal male, with asssociated 95% confidence intervals. **Means are not adjusted for zero inflation**.   
 
 # Raw data and reproducibility
 
