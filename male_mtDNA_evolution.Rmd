@@ -17,7 +17,7 @@ editor_options:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, cache = TRUE, warning = FALSE, message = FALSE)
+knitr::opts_chunk$set(echo = TRUE, cache = FALSE, warning = FALSE, message = FALSE)
 ```
 
 # Supplementary methods
@@ -252,8 +252,8 @@ names(survival_table)[names(survival_table) == "Sex"] <- "Sex"
 names(survival_table)[names(survival_table) == "Social_haplotype"] <- "Social haplotype"
 names(survival_table)[names(survival_table) == "Focal_haplotype:Sex"] <- "Focal haplotype x Sex"
 names(survival_table)[names(survival_table) == "Focal_haplotype:Social_haplotype"] <- "Focal haplotype x Social haplotype"
-names(survival_table)[names(survival_table) == "Social_haplotype:Sex"] <- "Social haplotype x Sex"
-names(survival_table)[names(survival_table) == "Focal_haplotype:Social_haplotype:Sex"] <- "Focal haplotype x Social haplotype x Sex"
+names(survival_table)[names(survival_table) == "Sex:Social_haplotype"] <- "Social haplotype x Sex"
+names(survival_table)[names(survival_table) == "Focal_haplotype:Sex:Social_haplotype"] <- "Focal haplotype x Social haplotype x Sex"
 names(survival_table)[names(survival_table) == "df"] <- "Degrees of freedom"
 names(survival_table)[names(survival_table) == "logLik"] <- "Log likelihood"
 names(survival_table)[names(survival_table) == "AICc"] <- "AICc"
@@ -421,8 +421,8 @@ names(development_table)[names(development_table) == "Focal_haplotype"] <- "Foca
 names(development_table)[names(development_table) == "Social_haplotype"] <- "Social haplotype"
 names(development_table)[names(development_table) == "Focal_haplotype:Sex"] <- "Focal haplotype x Sex"
 names(development_table)[names(development_table) == "Focal_haplotype:Social_haplotype"] <- "Focal haplotype x Social haplotype"
-names(development_table)[names(development_table) == "Social_haplotype:Sex"] <- "Social haplotype x Sex"
-names(development_table)[names(development_table) == "Focal_haplotype:Social_haplotype:Sex"] <- "Focal haplotype x Social haplotype x Sex"
+names(development_table)[names(development_table) == "Sex:Social_haplotype"] <- "Social haplotype x Sex"
+names(development_table)[names(development_table) == "Focal_haplotype:Sex:Social_haplotype"] <- "Focal haplotype x Social haplotype x Sex"
 names(development_table)[names(development_table) == "df"] <- "Degrees of freedom"
 names(development_table)[names(development_table) == "logLik"] <- "Log likelihood"
 names(development_table)[names(development_table) == "AICc"] <- "AICc"
@@ -458,7 +458,7 @@ pander(Dev_model_avg, split.cell = 40, split.table = Inf, emphasize.strong.rows 
 ```
 
 
-```{r}
+```{r, eval=FALSE}
 larval_development_plot_data <- larval_development %>% 
   mutate(Social_survival = replace(as.character(Social_survival), Social_survival == "L", "Died as larva"),
         Social_survival = replace(as.character(Social_survival), Social_survival == "P", "Died as pupa"),
@@ -561,8 +561,8 @@ names(size_table)[names(size_table) == "Sex"] <- "Sex"
 names(size_table)[names(size_table) == "Social_haplotype"] <- "Social haplotype"
 names(size_table)[names(size_table) == "Focal_haplotype:Sex"] <- "Focal haplotype x Sex"
 names(size_table)[names(size_table) == "Focal_haplotype:Social_haplotype"] <- "Focal haplotype x Social haplotype"
-names(size_table)[names(size_table) == "Social_haplotype:Sex"] <- "Social haplotype x Sex"
-names(size_table)[names(size_table) == "Focal_haplotype:Social_haplotype:Sex"] <- "Focal haplotype x Social haplotype x Sex"
+names(size_table)[names(size_table) == "Sex:Social_haplotype"] <- "Social haplotype x Sex"
+names(size_table)[names(size_table) == "Focal_haplotype:Sex:Social_haplotype"] <- "Focal haplotype x Social haplotype x Sex"
 names(size_table)[names(size_table) == "df"] <- "Degrees of freedom"
 names(size_table)[names(size_table) == "logLik"] <- "Log likelihood"
 names(size_table)[names(size_table) == "AICc"] <- "AICc"
@@ -623,7 +623,7 @@ body_size_plot_data %>%
 
 ```
 
-**Figure 5:** Wing length is affected by an individual's sex and the success of a social competitor. The coloured points show the development time for individual flies. The black points show the mean wing length for males and females and its 95% confidence limits.
+**Figure 5:** Sex affects wing length. The coloured points show the development time for individual flies. The black points show the mean wing length for males and females and its 95% confidence limits.
 
 
 ### Female reproductive output
@@ -636,7 +636,7 @@ We analysed the number of offspring produced by females using a hurdle model wit
 
 The model:
 
-**Maternal_total_offspring ~ Focal_haplotype * Social_haplotype + factor(Duplicate) + (1|Block) + (1|Pipette_tip)**
+**Maternal_total_offspring ~ Focal_haplotype * Social_haplotype + factor(Duplicate) + (1|Block)**
 
 ```{r}
 
@@ -661,11 +661,11 @@ female_table <- subset(female_dredge, delta < 6, recalc.weights = FALSE) %>% as.
 names(female_table)[names(female_table) == "cond((Int))"] <- "Conditional intercept"
 names(female_table)[names(female_table) == "zi((Int))"] <- "Zero-inflated intercept"
 names(female_table)[names(female_table) == "disp((Int))"] <- "Dispersion factor intercept"
-names(female_table)[names(female_table) == "cond(factor(duplicate))"] <- "Conditional (Duplicate)"
+names(female_table)[names(female_table) == "cond(factor(Duplicate))"] <- "Conditional (Duplicate)"
 names(female_table)[names(female_table) == "cond(Focal_haplotype)"] <- "Conditional (Focal haplotype)"
 names(female_table)[names(female_table) == "cond(Social_haplotype)"] <- "Conditional (Social haplotype)"
 names(female_table)[names(female_table) == "cond(Focal_haplotype:Social_haplotype)"] <- "Conditional (Focal haplotype x Social haplotype)"
-names(female_table)[names(female_table) == "zi(factor(duplicate))"] <- "Zero-inflated (Duplicate)"
+names(female_table)[names(female_table) == "zi(factor(Duplicate))"] <- "Zero-inflated (Duplicate)"
 names(female_table)[names(female_table) == "zi(Focal_haplotype)"] <- "Zero-inflated (Focal haplotype)"
 names(female_table)[names(female_table) == "zi(Social_haplotype)"] <- "Zero-inflated (Social haplotype)"
 names(female_table)[names(female_table) == "zi(Focal_haplotype:Social_haplotype)"] <- "Zero-inflated (Focal haplotype x Social haplotype)"
@@ -867,21 +867,21 @@ male_zi_plot_data %>%
 
 ```{r}
 
-male_cond_plot_data <- Male_fitness %>% 
-  filter(Focal_male_offspring != 0)
+# male_cond_plot_data <- Male_fitness %>% 
+  # filter(Focal_male_offspring != 0)
 
-male_cond_summary <- male_cond_plot_data %>% 
+male_cond_summary <- Male_fitness %>% 
   dplyr::group_by(Social_haplotype) %>%
   dplyr::summarise(Social_partner_offspring = sum(Focal_male_offspring), Standard_competitor_offspring = sum(Bw_offspring)) %>%
   as.data.frame()
 
-male_cond_summary <- male_cond_plot_data %>% 
+male_cond_summary <- Male_fitness %>% 
   group_by(Social_haplotype) %>%
   dplyr::summarise(Mean_proportion_focal = sum(Proportion_focal) / length(Proportion_focal), Lower = (Mean_proportion_focal - SE(Proportion_focal)* 1.96), Upper = (Mean_proportion_focal + SE(Proportion_focal)*1.96), n = n()) %>% rename(Proportion_focal = Mean_proportion_focal)
 
-Male_cond_plot <- male_cond_plot_data %>%
+Male_cond_plot <- Male_fitness %>%
   ggplot(aes(x = Social_haplotype, y = Proportion_focal, fill = Social_haplotype, colour = Social_haplotype)) +
-  geom_quasirandom(data = male_cond_plot_data, width = 0.3, alpha =  0.5, aes(size = Offspring_counted)) +
+  geom_quasirandom(data = Male_fitness, width = 0.3, alpha =  0.5, aes(size = Offspring_counted)) +
   scale_size_continuous(range = c(0.5, 6), labels = NULL, breaks = c(20, 40, 60, 80, 100, 120)) +
   scale_colour_manual(values = c("Barcelona" = "#a50f15", "Brownsville" = "#fe9929", "Dahomey" = "#41b6c4", "Israel" = "#238443" , "Sweden" = "#4a1486")) +
   geom_point(data = male_cond_summary, aes(x = Social_haplotype, y = Proportion_focal), size = 3, colour='black') +
