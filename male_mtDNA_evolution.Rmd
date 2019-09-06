@@ -111,8 +111,8 @@ get_CIs_for_binomial_trials <- function(success, failure){
 
 # Select the columns we're interested in and rename them
 
-fitness_data <- dplyr::select(all_data, Individual, Block, duplicate,  Pipette_tip, Sex, Focal.haplotype, Social.haplotype, Mortality,  Social.Survival, Development.time..hrs., Day.emerged, Hours.from.lights.on, Wing.size..mm., Female.offspring, Male.offspring, Total.female.assay, Total.red.all.vials, Total.bw.all.vials) %>% 
-  rename(Block = Block, Duplicate = duplicate, Day = Day.emerged, Hours = Hours.from.lights.on, Survived = Mortality, Focal_haplotype = Focal.haplotype, Social_haplotype = Social.haplotype, Social_survival = Social.Survival, Dev_time = Development.time..hrs., Wing_length = Wing.size..mm., Maternal_female_offspring = Female.offspring, Maternal_male_offspring = Male.offspring, Maternal_total_offspring = Total.female.assay, Paternal_focal_offspring = Total.red.all.vials, Patneral_bw_offspring = Total.bw.all.vials)
+fitness_data <- dplyr::select(all_data, Individual, Block, duplicate,  Pipette_tip, Sex, Focal.haplotype, Social.haplotype, Mortality,  Social.Survival, Development.time..hrs., Day.emerged, Hours.from.lights.on, Wing.size..mm., Female.offspring, Male.offspring, Total.female.assay, Total.red.all.vials, Total.bw.all.vials, Proportion.red.all.vials) %>% 
+  rename(Block = Block, Duplicate = duplicate, Day = Day.emerged, Hours = Hours.from.lights.on, Survived = Mortality, Focal_haplotype = Focal.haplotype, Social_haplotype = Social.haplotype, Social_survival = Social.Survival, Dev_time = Development.time..hrs., Wing_length = Wing.size..mm., Maternal_female_offspring = Female.offspring, Maternal_male_offspring = Male.offspring, Maternal_total_offspring = Total.female.assay, Paternal_focal_offspring = Total.red.all.vials, Patneral_bw_offspring = Total.bw.all.vials, Proportion_focal = Proportion.red.all.vials)
 
 # Define new levels for mortality to make renaming possible 
 
@@ -141,21 +141,21 @@ fitness_data$Survived <- as.numeric(as.character(fitness_data$Survived))
 
 # Create specific datasets for each fitness trait
 
-# Remove all rows that contain an NA value in the survival column. The NAs mean things like the GFP sorting did not work, or the vial was never even set up due to a shortage of larvae. So they are not meaningful data, and we remove them here. Also remove NA values in the social survival column as the dredge function won't work with these in the dataset.
+# Remove all rows that contain an NA value in the survival column. The NAs mean things like the GFP sorting did not work, or the vial was never even set up due to a shortage of larvae. They are not meaningful data, and we remove them here.
 
-survival <- fitness_data %>% filter(!is.na(Survived)) %>% filter(!is.na(Social_survival))
+survival <- fitness_data %>% filter(!is.na(Survived)) 
   
 # Remove all rows that contain an NA value in the development time column. This instances represent flies where we failed to measure development time. 
 
-larval_development <- fitness_data %>% filter(!is.na(Dev_time)) %>% filter(!is.na(Social_survival))
+larval_development <- fitness_data %>% filter(!is.na(Dev_time)) 
 
 # Remove all rows that contain an NA value in the wing length column. Wing length was not measured in Blocks 1 and 2.
 
-body_size <- fitness_data %>% filter(!is.na(Wing_length)) %>% filter(!is.na(Social_survival))
+body_size <- fitness_data %>% filter(!is.na(Wing_length)) 
 
 # Remove all rows that contain an NA value in the female reproductive output column, and where females did not survive to adulthood (coded as producing 0 offspring). 
 
-female_reproductive_output <- fitness_data %>% filter(!is.na(Maternal_total_offspring), Survived == 1) %>% filter(!is.na(Social_survival))
+female_reproductive_output <- fitness_data %>% filter(!is.na(Maternal_total_offspring), Survived == 1)
 
 
 # Male adult fitness
@@ -164,7 +164,7 @@ female_reproductive_output <- fitness_data %>% filter(!is.na(Maternal_total_offs
 
 Male_fitness <- all_data %>% filter(!is.na(Total.red.all.vials)) 
 
-# Create an offspring counted column so that the data is correctly formatted for a binomial model.
+# Create an offspring counted column so that the data is correctly formatted for a binomial success-failure model.
 
 Male_fitness$Offspring_counted <- Male_fitness$Total.red.all.vials + Male_fitness$Total.bw.all.vials
 
@@ -175,8 +175,29 @@ Male_fitness <- Male_fitness %>% filter(!(Offspring_counted == 0))
 # Select relevant columns and rename variables 
 
 Male_fitness <- dplyr::select(Male_fitness, Individual, Block, Pipette_tip, Focal.haplotype, Social.haplotype, Social.Survival,  Mortality, Development.time..hrs., Day.emerged, Wing.size..mm., Hours.from.lights.on, Total.red.all.vials, Total.bw.all.vials, Offspring_counted,  Proportion.red.all.vials, duplicate) %>% 
-  rename(Focal_male_offspring = Total.red.all.vials, Block = Block, Day = Day.emerged, Hours = Hours.from.lights.on, Survived = Mortality, Focal_haplotype = Focal.haplotype, Social_haplotype = Social.haplotype, Social_survival = Social.Survival, Dev_time = Development.time..hrs., Wing_length = Wing.size..mm., Proportion_focal = Proportion.red.all.vials, Bw_offspring = Total.bw.all.vials, Duplicate = duplicate) %>% 
-  filter(!is.na(Social_survival))
+  rename(Focal_male_offspring = Total.red.all.vials, Block = Block, Day = Day.emerged, Hours = Hours.from.lights.on, Survived = Mortality, Focal_haplotype = Focal.haplotype, Social_haplotype = Social.haplotype, Social_survival = Social.Survival, Dev_time = Development.time..hrs., Wing_length = Wing.size..mm., Proportion_focal = Proportion.red.all.vials, Bw_offspring = Total.bw.all.vials, Duplicate = duplicate)
+
+# Create a correlation matrix for male and female life-history traits 
+
+Male_cor <- fitness_data %>% 
+  select(Dev_time, Wing_length, Paternal_focal_offspring, Proportion_focal) %>%
+  rename(Development_time = Dev_time, Offspring_produced = Paternal_focal_offspring, Proportion_offspring_produced = Proportion_focal) %>%
+  as.data.frame()
+
+Male_cor$Pipette_tip <- as.numeric(as.character(Male_cor$Pipette_tip))
+Male_cor <- Male_cor %>% select(-(Pipette_tip))
+
+Female_cor <- fitness_data %>% 
+  filter(!is.na(Survived)) %>%
+  filter(Sex == "F") %>%
+  select(Dev_time, Wing_length, Maternal_female_offspring, Maternal_male_offspring) %>%
+  rename(Development_time = Dev_time, Female_offspring = Maternal_female_offspring, Male_offspring = Maternal_male_offspring) %>% as.data.frame()
+
+Female_cor$Pipette_tip <- as.numeric(as.character(Female_cor$Pipette_tip))
+Female_cor <- Female_cor %>% select(-(Pipette_tip))
+
+# Male_correlations <- cor(Male_cor, use = "complete.obs") %>% pander(split.cell = 40, split.table = Inf)
+# Female_correlations <- cor(Female_cor, use = "complete.obs") %>% pander(split.cell = 40, split.table = Inf)
 
 ```
 
@@ -268,7 +289,6 @@ pander(survival_table, split.cell = 40, split.table = Inf)
 
 **Table 1**: Conditional model coefficients, standard error and 95% confidence limits are shown for the survivorship to adulthood averaged model. Bold rows indicate signficant effects.
 ```{r}
-
 # average the models with delta < 6
 
 Survival_avg <- model.avg(survival_dredge, subset = delta < 6)
@@ -759,7 +779,7 @@ female_cond_plot_data %>%
 
 **Figure 7:** Number of offspring produced by females that produced at least one offspring, split by mitochondrial haplotype. Data corresponds to the conditional component of the hurdle model. Coloured points show the number of offspring produced by individual females. The black points show the mean reproductive output for females and its 95% confidence limits. 
 
-### Male adult fitness (EDIT NEEDED)
+### Male adult fitness
 
 We follow the classic approach to sperm competition analysis and consider male fitness as the proportion of offspring sired by an experimental mitoline male while competing against a standard _bw_ male.
 
