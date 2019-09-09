@@ -725,38 +725,76 @@ pander(Female_model_avg, split.cell = 40, split.table = Inf, emphasize.strong.ro
 
 ```
 
-```{r}
+```{r, fig.width=11, fig.height=8.5}
 female_zi_plot_data <- female_reproductive_output %>%
   mutate(Binary_maternal_offspring = ifelse(Maternal_total_offspring > 0, "1", "0"))
 
-female_zi_summary <- female_zi_plot_data %>% 
+# create the social zi plot
+
+female_social_zi_summary <- female_zi_plot_data %>% 
   dplyr::group_by(Social_haplotype) %>%
   dplyr::summarise(number_producing_offspring = sum(Binary_maternal_offspring == 1), number_zero_offspring = sum(Binary_maternal_offspring == 0)) %>%
   as.data.frame()
 
-female_zi_CIs <- get_CIs_for_binomial_trials(female_zi_summary$number_producing_offspring, female_zi_summary$number_zero_offspring) %>% rename(Binary_maternal_offspring = Proportion)
+female_social_zi_CIs <- get_CIs_for_binomial_trials(female_social_zi_summary$number_producing_offspring, female_social_zi_summary$number_zero_offspring) %>% rename(Binary_maternal_offspring = Proportion)
 
-female_zi_summary <- cbind(female_zi_summary, female_zi_CIs)
+female_social_zi_summary <- cbind(female_social_zi_summary, female_social_zi_CIs)
 
-female_zi_plot_data %>%
+female_social_zi_plot <- female_zi_plot_data %>%
   ggplot(aes(x = Social_haplotype, y = Binary_maternal_offspring, fill = Social_haplotype, colour = Social_haplotype)) +
-  geom_point(data = female_zi_summary, aes(x = Social_haplotype, y = Binary_maternal_offspring), size = 3, colour='black') +
-  geom_errorbar(data = female_zi_summary, aes(x = Social_haplotype, ymax = upperCI, ymin = lowerCI, width = 0), colour = "black") +
+  geom_point(data = female_social_zi_summary, aes(x = Social_haplotype, y = Binary_maternal_offspring), size = 3, colour='black') +
+  geom_errorbar(data = female_social_zi_summary, aes(x = Social_haplotype, ymax = upperCI, ymin = lowerCI, width = 0), colour = "black") +
   labs(x = "Social male mtDNA haplotype", y = "Proportion of females producing offspring") +
   theme_minimal() +
   theme(legend.position = "none") +
   theme(panel.grid.major.x = element_blank())
 
-```
+# create the focal zi plot
 
-**Figure 6:** The proportion of females successfully producing offspring is affected by the mtDNA of a social male competitor during larval development. Black points show the mean for each social haplotype and associated confidence intervals. Data corresponds to the hurdle (binomial) component of the hurdle model.  
+female_focal_zi_summary <- female_zi_plot_data %>% 
+  dplyr::group_by(Focal_haplotype) %>%
+  dplyr::summarise(number_producing_offspring = sum(Binary_maternal_offspring == 1), number_zero_offspring = sum(Binary_maternal_offspring == 0)) %>%
+  as.data.frame()
+
+female_focal_zi_CIs <- get_CIs_for_binomial_trials(female_focal_zi_summary$number_producing_offspring, female_focal_zi_summary$number_zero_offspring) %>% rename(Binary_maternal_offspring = Proportion)
+
+female_focal_zi_summary <- cbind(female_focal_zi_summary, female_focal_zi_CIs)
 
 
-```{r}
+female_focal_zi_plot <- female_zi_plot_data %>%
+  ggplot(aes(x = Focal_haplotype, y = Binary_maternal_offspring, fill = Focal_haplotype, colour = Focal_haplotype)) +
+  geom_point(data = female_focal_zi_summary, aes(x = Focal_haplotype, y = Binary_maternal_offspring), size = 3, colour='black') +
+  geom_errorbar(data = female_focal_zi_summary, aes(x = Focal_haplotype, ymax = upperCI, ymin = lowerCI, width = 0), colour = "black") +
+  labs(x = "Female mtDNA haplotype", y = "Proportion of females producing offspring") +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  theme(panel.grid.major.x = element_blank())
+
+# create the focal conditional plot
+
+female_cond_plot_data <- female_reproductive_output %>%
+  filter(Maternal_total_offspring != 0)
+
+female_social_cond_summary <- female_cond_plot_data %>% 
+  dplyr::group_by(Social_haplotype) %>%
+  dplyr::summarise(Mean_offspring = mean(Maternal_total_offspring), Lower = (Mean_offspring - SE(Maternal_total_offspring)* 1.96), Upper = (Mean_offspring + SE(Maternal_total_offspring)*1.96), n = n()) %>%
+  rename(Maternal_total_offspring = Mean_offspring)
+
+
+female_social_cond_plot <- female_cond_plot_data %>%
+  ggplot(aes(x = Social_haplotype, y = Maternal_total_offspring, fill = Social_haplotype, colour = Social_haplotype)) +
+  geom_quasirandom(data = female_cond_plot_data, width = 0.3, size = 2, alpha =  0.5) +
+  scale_colour_manual(values = c("Barcelona" = "#a50f15", "Brownsville" = "#fe9929", "Dahomey" = "#41b6c4", "Israel" = "#238443" , "Sweden" = "#4a1486")) +
+  geom_point(data = female_social_cond_summary, aes(x = Social_haplotype, y = Maternal_total_offspring), size = 3, colour='black') +
+  geom_errorbar(data = female_social_cond_summary, aes(x = Social_haplotype, ymax = Upper, ymin = Lower, width = 0), colour = "black") +
+  labs(x = "Social male mtDNA haplotype", y = "Number of offspring produced") +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  theme(panel.grid.major.x = element_blank())
+
+# create the focal conditional plot
+
 female_cond_plot_data <- female_reproductive_output %>% 
-  mutate(Social_survival = replace(as.character(Social_survival), Social_survival == "L", "Died as larva"),
-        Social_survival = replace(as.character(Social_survival), Social_survival == "P", "Died as pupa"),
-         Social_survival = replace(as.character(Social_survival), Social_survival == "N", "Survived to adulthood")) %>%
   filter(Maternal_total_offspring != 0)
 
 female_cond_summary <- female_cond_plot_data %>% 
@@ -764,7 +802,7 @@ female_cond_summary <- female_cond_plot_data %>%
   dplyr::summarise(Mean_offspring = mean(Maternal_total_offspring), Lower = (Mean_offspring - SE(Maternal_total_offspring)* 1.96), Upper = (Mean_offspring + SE(Maternal_total_offspring)*1.96), n = n()) %>% rename(Maternal_total_offspring = Mean_offspring)
 
 
-female_cond_plot_data %>%
+female_focal_cond_plot <- female_cond_plot_data %>%
   ggplot(aes(x = Focal_haplotype, y = Maternal_total_offspring, fill = Focal_haplotype, colour = Focal_haplotype)) +
   geom_quasirandom(data = female_cond_plot_data, width = 0.3, size = 2, alpha =  0.5) +
   scale_colour_manual(values = c("Barcelona" = "#a50f15", "Brownsville" = "#fe9929", "Dahomey" = "#41b6c4", "Israel" = "#238443" , "Sweden" = "#4a1486")) +
@@ -775,9 +813,11 @@ female_cond_plot_data %>%
   theme(legend.position = "none") +
   theme(panel.grid.major.x = element_blank())
 
+ggarrange(female_focal_zi_plot, female_focal_cond_plot, female_social_zi_plot, female_social_cond_plot)
+
 ```
 
-**Figure 7:** Number of offspring produced by females that produced at least one offspring, split by mitochondrial haplotype. Data corresponds to the conditional component of the hurdle model. Coloured points show the number of offspring produced by individual females. The black points show the mean reproductive output for females and its 95% confidence limits. 
+**Figure 6:** mtDNA affects the direct and inclusive components of fitness. Panels a and b show the direct effect of mtDNA on female fitness, for the hurdle (binomial - did the female produce any offspring) and conditional (gaussian - how many offspring did the female produce) components of the model respectively. Panels c and d show the social effect of mtDNA on female fitness. Black points show the mean for each focal/social haplotype and associated confidence intervals. 
 
 ### Male adult fitness
 
@@ -898,7 +938,7 @@ male_binary_plot_data %>%
   theme(panel.grid.major.x = element_blank())
 ```
 
-**Figure 8:** The proportion of males successfully producing offspring is not affected by the mtDNA of a social female competitor during larval development. Black points show the mean for each social haplotype and associated confidence intervals.
+**Figure 7:** The proportion of males successfully producing offspring is not affected by the mtDNA of a social female competitor during larval development. Black points show the mean for each social haplotype and associated confidence intervals.
 
 Beta-binomial model:
 
@@ -918,6 +958,28 @@ response <- cbind(Male_fitness_without_Brownsville$Focal_male_offspring_beta, Ma
 
 male_model <- glmmTMB(response ~ Focal_haplotype * Social_haplotype + factor(Duplicate) + (1|Block), data = Male_fitness_without_Brownsville, family = betabinomial(link = "logit"), zi= ~0, na.action = na.fail, REML = FALSE, control = glmmTMBControl(optCtrl = list(iter.max = 1000, eval.max = 1000), profile = TRUE, collect = FALSE))
 
+```
+
+Lets compare our beta-binomial famly model with a model specifying a standard binomial family and a zero-inflated binomial family. 
+
+```{r}
+mm_binom <- update(male_model, family = binomial)
+
+# Now update with a zi binomial family, for this we need to reinstate the zero and one filled raw data
+
+response1 <- cbind(Male_fitness_without_Brownsville$Focal_male_offspring, Male_fitness_without_Brownsville$Bw_offspring)
+
+mm_zi_binom <- update(male_model,
+                      response1 ~ Focal_haplotype * Social_haplotype + factor(Duplicate) + (1|Block),
+                      ziformula = ~.,
+                      family = binomial)
+
+
+# cmpare model AICs
+
+library(bbmle)
+
+AICtab(male_model, mm_binom, mm_zi_binom)
 ```
 
 
@@ -995,7 +1057,7 @@ Male_cond_plot
 
 ```
 
-**Figure 9:** Male reproductive success relative to a standard _bw_ competitor is affected by the mtDNA of a social female competitor during larval development. Black points show the mean for each social haplotype and associated confidence intervals. Coloured points show individual males; the size of the point represents the number of offspring produced by both competitors. Data corresponds to the conditional component component of the zero-inflated model.
+**Figure 8:** Male reproductive success relative to a standard _bw_ competitor is affected by the mtDNA of a social female competitor during larval development. Black points show the mean for each social haplotype and associated confidence intervals. Coloured points show individual males; the size of the point represents the number of offspring produced by both competitors. Data corresponds to the conditional component component of the zero-inflated model.
 
 ```{r, fig.width= 9, fig.height= 4, eval=FALSE}
 
