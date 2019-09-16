@@ -1,7 +1,8 @@
 ---
 title: Kin selection subverts mitochondrial transmission bias and allows male mtDNA evolution
 author: "Thomas Keaney, Heidi Wong, Damian Dowling, Theresa Jones, and Luke Holman"
-bibliography: "supp_references.bib" 
+bibliography: "supp_references.bib"
+subtitle: Supplementary material
 output:
   html_document:
     code_folding: hide
@@ -11,7 +12,6 @@ output:
     toc: yes
     toc_float: yes
     code_download: true
-subtitle: Supplementary material
 editor_options:
   chunk_output_type: console
 ---
@@ -305,7 +305,7 @@ names(survival_model_avg)[names(survival_model_avg) == "X2.5.."] <- "2.5% Interv
 names(survival_model_avg)[names(survival_model_avg) == "X97.5.."] <- "97.5% Interval"
 
 
-pander(survival_model_avg, split.cell = 40, split.table = Inf, emphasize.strong.rows = (2))
+pander(survival_model_avg, split.cell = 40, split.table = Inf, emphasize.strong.rows = (2), round = 3)
 
 # The full average provides a parameter average across all models considered, including ones where the parameter coefficient is set to 0. The conditional average reports coefficents for only the models where the parameter is included.
 
@@ -473,7 +473,7 @@ names(Dev_model_avg)[names(Dev_model_avg) == "X2.5.."] <- "2.5% Interval"
 names(Dev_model_avg)[names(Dev_model_avg) == "X97.5.."] <- "97.5% Interval"
 
 
-pander(Dev_model_avg, split.cell = 40, split.table = Inf, emphasize.strong.rows = 3)
+pander(Dev_model_avg, split.cell = 40, split.table = Inf, emphasize.strong.rows = 3, , round = 3)
 
 ```
 
@@ -616,7 +616,7 @@ names(Size_model_avg)[names(Size_model_avg) == "Std..Error"] <- "Standard Error"
 names(Size_model_avg)[names(Size_model_avg) == "X2.5.."] <- "2.5% Interval"
 names(Size_model_avg)[names(Size_model_avg) == "X97.5.."] <- "97.5% Interval"
 
-pander(Size_model_avg, split.cell = 40, split.table = Inf, emphasize.strong.rows = (2))
+pander(Size_model_avg, split.cell = 40, split.table = Inf, emphasize.strong.rows = (2), round = 3)
 
 ```
 
@@ -721,7 +721,7 @@ names(Female_model_avg)[names(Female_model_avg) == "Std..Error"] <- "Standard Er
 names(Female_model_avg)[names(Female_model_avg) == "X2.5.."] <- "2.5% Interval"
 names(Female_model_avg)[names(Female_model_avg) == "X97.5.."] <- "97.5% Interval"
 
-pander(Female_model_avg, split.cell = 40, split.table = Inf, emphasize.strong.rows = c(2, 5, 10))
+pander(Female_model_avg, split.cell = 40, split.table = Inf, emphasize.strong.rows = c(2, 5, 10), , round = 3)
 
 ```
 
@@ -823,48 +823,22 @@ ggarrange(female_focal_zi_plot, female_focal_cond_plot, female_social_zi_plot, f
 
 We follow the classic approach to sperm competition analysis and consider male fitness as the proportion of offspring sired by an experimental mitoline male while competing against a standard _bw_ male.
 
-Here we are measuring male fitness as 1) the ability of a male to inseminate a female in the presence of another male and 2) the competitive ability of his sperm within females that have been inseminated by another male.
-
-As shown below, the data contains many 0 or 1 values - corresponding to a monopoly of female fertilisation by one of the males. We could assume the data are binomial, and class any non-zero values as '1'. Alternatively, we could specify a beta-binomial distribution, which allows us to model the data in its current form, with one exception. The beta-binomial family is used to model data that falls between 0-1, which is perfect for our proportional data. However, this family does not account for values exactly equal to 0 or 1. Therefore, I add one offspring to the count of each vial for each phenotype, thereby removing all vials where one male sired all the offspring in the vial. This allows us to effectively model the data, without substantial changes to the raw data. 
-
-```{r}
-
-density_male_plot <- ggplot(Male_fitness)+
-  stat_density_ridges(aes(x=Proportion_focal, y = NA), alpha = 0.7, scale = 12, position = position_nudge(y = -0.5), show.legend = T) +
-  xlab("Proportion of offspring sired by experimental male") +
-  ylab("Kernel density estimate") +
-  theme_bw()+
-  scale_x_continuous(limits = c(0, 1)) +
-  theme(panel.spacing = unit(0.1, "lines"),
-        text = element_text(size=16),
-        panel.border= element_blank(),
-        axis.line=element_line(), 
-        panel.grid.major.x = element_blank(),
-        panel.grid.major.y = element_blank(),
-        panel.grid.minor.y = element_blank(),
-        panel.grid.minor.x = element_blank(),
-        axis.text.y=element_blank(),
-        axis.ticks.y=element_blank(),
-        axis.title.x = element_text(hjust = 0.5, size = 14))
-density_male_plot
-
-```
-
-
+However, our measure of male fitness involves both pre- and post-copulatory competiitve ability; that is we assess 1) the ability of a male to inseminate a female in the presence of another male and 2) the competitive ability of his sperm within females that have been inseminated by another male. Interestingly, the data contains many 0 or 1 values - corresponding to a monopoly of female fertilisation by one of the males.
 
 The Brownsville haplotype renders males sterile alongside the _w^1118^_ nuclear background and sub-fertile alongside all other tested backgrounds. In our experiment, we find that Brownsville males are able to produce offspring but to a very limited capacity. Due to this, our model will not converge with the Brownsville males in the dataset. Therefore, we acknowledge that there is an effect of the Brownsville focal haplotype on male fitness and then remove it from the dataset.
 
-We transform the data to binary and fit the model:
+We fit a success / failure binomial model:
 
 **(Focal_male_offspring, bw_offspring) ~ Focal_haplotype * Social_haplotype + Duplicate + (1|Block)**
 
 
 ```{r}
-Binary_male_fitness <- Male_fitness %>%
-  filter(Focal_haplotype != "Brownsville") %>%
-  mutate(Binary_paternal_offspring = ifelse(Proportion_focal > 0, "1", "0"))
+Male_fitness_without_Brownsville <- Male_fitness %>%
+  filter(Focal_haplotype != "Brownsville")
 
-Binary_male_model <- lme4::glmer(factor(Binary_paternal_offspring) ~ Focal_haplotype * Social_haplotype + factor(Duplicate) + (1|Block), data = Binary_male_fitness, family = "binomial", control = glmerControl(optimizer = "Nelder_Mead", optCtrl=list(maxfun=100000)), na.action = na.fail)
+response <- cbind(Male_fitness_without_Brownsville$Focal_male_offspring, Male_fitness_without_Brownsville$Bw_offspring)
+
+Binary_male_model <- lme4::glmer(response ~ Focal_haplotype * Social_haplotype + factor(Duplicate) + (1|Block) + (1|Individual), data = Male_fitness_without_Brownsville, family = "binomial", control = glmerControl(optimizer = "Nelder_Mead", optCtrl=list(maxfun=100000)), na.action = na.fail)
 
 
 ```
@@ -873,12 +847,18 @@ Binary_male_model <- lme4::glmer(factor(Binary_paternal_offspring) ~ Focal_haplo
 #### Model evaluation
 
 
-**Table S4**: Evaluation of the male adult fitness model, where data was transformed to a **binary format**. All possible models were evaluated from the global model that included an interaction between focal haplotype and social haplotype, the standalone fixed effect 'duplicate', and the random factors 'Block'. As there was no clear top model, the final model was calculated via model averaging.
+**Table S4**: Evaluation of the male adult fitness model. All possible models were evaluated from the global model that included an interaction between focal haplotype and social haplotype, the standalone fixed effect 'duplicate', and the random factors Block and Individual. As there was no clear top model, the final model was calculated via model averaging.
 ```{r}
 male_binary_dredge <- dredge(Binary_male_model)
 
-Male_binary_table <- subset(male_binary_dredge, delta < 6, recalc.weights = FALSE) %>% as.data.frame()
+Male_binary_table <- subset(male_binary_dredge, delta < 6) %>% as.data.frame()
 
+
+names(Male_binary_table)[names(Male_binary_table) == "(Intercept)"] <- "Intercept"
+names(Male_binary_table)[names(Male_binary_table) == "factor(Duplicate)"] <- "Duplicate"
+names(Male_binary_table)[names(Male_binary_table) == "Focal_haplotype"] <- "Focal haplotype"
+names(Male_binary_table)[names(Male_binary_table) == "Social_haplotype"] <- "Social haplotype"
+names(Male_binary_table)[names(Male_binary_table) == "Focal_haplotype:Social_haplotype"] <- "Focal haplotype x Social haplotype"
 names(Male_binary_table)[names(Male_binary_table) == "df"] <- "Degrees of freedom"
 names(Male_binary_table)[names(Male_binary_table) == "logLik"] <- "Log likelihood"
 names(Male_binary_table)[names(Male_binary_table) == "AICc"] <- "AICc"
@@ -892,7 +872,7 @@ pander(Male_binary_table, split.cell = 40, split.table = Inf)
 
 #### Model averaging
 
-**Table 5:** Model coefficients, standard error and 95% confidence limits are shown for the **binary** male adult fitness averaged model. Bold rows indicate signficant effects. 
+**Table 5:** Model coefficients, standard error and 95% confidence limits are shown for the male adult fitness averaged model. Bold rows indicate signficant effects. 
 
 ```{r}
 
@@ -904,130 +884,21 @@ Male_binary_estimate <- coefTable(model.avg(male_binary_dredge, subset = delta <
 
 Male_binary_model_avg <- data.frame(Male_binary_estimate, Male_binary_CIs) %>% select(Estimate, Std..Error,  X2.5.., X97.5..)
 
+
+
 names(Male_binary_model_avg)[names(Male_binary_model_avg) == "Estimate"] <- "Conditional average estimate"
 names(Male_binary_model_avg)[names(Male_binary_model_avg) == "Std..Error"] <- "Standard Error"
 names(Male_binary_model_avg)[names(Male_binary_model_avg) == "X2.5.."] <- "2.5% Interval"
 names(Male_binary_model_avg)[names(Male_binary_model_avg) == "X97.5.."] <- "97.5% Interval"
 
-pander(Male_binary_model_avg, split.cell = 40, split.table = Inf)
-
-```
-
-
-```{r}
-
-male_binary_plot_data <- Male_fitness %>%
-  mutate(Binary_paternal_offspring = ifelse(Focal_male_offspring > 0, "1", "0"))
-
-male_binary_summary <- male_binary_plot_data %>% 
-  dplyr::group_by(Social_haplotype) %>%
-  dplyr::summarise(number_producing_offspring = sum(Binary_paternal_offspring == 1), number_zero_offspring = sum(Binary_paternal_offspring == 0)) %>%
-  as.data.frame()
-
-male_binary_CIs <- get_CIs_for_binomial_trials(male_binary_summary$number_producing_offspring, male_binary_summary$number_zero_offspring) %>% rename(Binary_paternal_offspring = Proportion)
-
-male_binary_summary <- cbind(male_binary_summary, male_binary_CIs)
-
-male_binary_plot_data %>%
-  ggplot(aes(x = Social_haplotype, y = Binary_paternal_offspring, fill = Social_haplotype, colour = Social_haplotype)) +
-  geom_point(data = male_binary_summary, aes(x = Social_haplotype, y = Binary_paternal_offspring), size = 3, colour='black') +
-  geom_errorbar(data = male_binary_summary, aes(x = Social_haplotype, ymax = upperCI, ymin = lowerCI, width = 0), colour = "black") +
-  labs(x = "Social female mtDNA haplotype", y = "Proportion of males producing offspring") +
-  theme_minimal() +
-  theme(legend.position = "none") +
-  theme(panel.grid.major.x = element_blank())
-```
-
-**Figure 7:** The proportion of males successfully producing offspring is not affected by the mtDNA of a social female competitor during larval development. Black points show the mean for each social haplotype and associated confidence intervals.
-
-Beta-binomial model:
-
-We can also use the beta binomial distribution to model our data. However, this distribution can't handle 0 or 1 values so we add 1 to each offspring count (offspring produced by mitoline and competitor males) in each vial.
-
-**(Focal_male_offspring, bw_offspring) ~ Focal_haplotype * Social_haplotype + Duplicate + (1|Block)**
-
-```{r}
-Male_fitness_without_Brownsville <- Male_fitness %>%
-  filter(Focal_haplotype != "Brownsville") %>%
-  mutate(Individual = 1:n()) %>%
-  mutate(Focal_male_offspring_beta = Focal_male_offspring + 1) %>%
-  mutate(Bw_offspring_beta = Bw_offspring + 1)
-
-
-response <- cbind(Male_fitness_without_Brownsville$Focal_male_offspring_beta, Male_fitness_without_Brownsville$Bw_offspring_beta)
-
-male_model <- glmmTMB(response ~ Focal_haplotype * Social_haplotype + factor(Duplicate) + (1|Block), data = Male_fitness_without_Brownsville, family = betabinomial(link = "logit"), zi= ~0, na.action = na.fail, REML = FALSE, control = glmmTMBControl(optCtrl = list(iter.max = 1000, eval.max = 1000), profile = TRUE, collect = FALSE))
-
-```
-
-Lets compare our beta-binomial famly model with a model specifying a standard binomial family and a zero-inflated binomial family. 
-
-```{r}
-mm_binom <- update(male_model, family = binomial)
-
-# Now update with a zi binomial family, for this we need to reinstate the zero and one filled raw data
-
-response1 <- cbind(Male_fitness_without_Brownsville$Focal_male_offspring, Male_fitness_without_Brownsville$Bw_offspring)
-
-mm_zi_binom <- update(male_model,
-                      response1 ~ Focal_haplotype * Social_haplotype + factor(Duplicate) + (1|Block),
-                      ziformula = ~.,
-                      family = binomial)
-
-
-# cmpare model AICs
-
-library(bbmle)
-
-AICtab(male_model, mm_binom, mm_zi_binom)
-```
-
-
-**Table S5**: Evaluation of the male adult fitness model. All possible models were evaluated from the global model that included an interaction between focal haplotype and social haplotype, the standalone fixed effect 'duplicate', and the random factor 'Block'. As there was no clear top model, the final model was calculated via model averaging.
-```{r}
-
-if(file.exists("male_dredge.rds")){ # If already done, just load the results
-  male_dredge <- readRDS("male_dredge.rds")
-} else {male_dredge <- dredge(male_model) # If not already done, run the dredge and save the results
-lapply(c("male_dredge"), save_it)
-}
-
-Male_table <- subset(male_dredge, delta < 6, recalc.weights = FALSE) %>% as.data.frame()
-
-names(Male_table)[names(Male_table) == "df"] <- "Degrees of freedom"
-names(Male_table)[names(Male_table) == "logLik"] <- "Log likelihood"
-names(Male_table)[names(Male_table) == "AICc"] <- "AICc"
-names(Male_table)[names(Male_table) == "delta"] <- "Delta"
-names(Male_table)[names(Male_table) == "weight"] <- "Weight"
-
-pander(Male_table, split.cell = 40, split.table = Inf)
-
-```
-
-
-**Table 6:** Model coefficients, standard error and 95% confidence limits are shown for the male adult fitness averaged model. Bold rows indicate signficant effects. 
-```{r}
-
-Male_model_average <-model.avg(male_dredge, subset = delta < 6, fit = TRUE)
-
-Male_CIs <- confint(model.avg(male_dredge, subset = delta < 6)) %>% as.data.frame()
-
-Male_estimate <- coefTable(model.avg(male_dredge, subset = delta < 6)) %>% as.data.frame()
-
-Male_model_avg <- data.frame(Male_estimate, Male_CIs) %>% select(Estimate, Std..Error,  X2.5.., X97.5..)
-
-names(Male_model_avg)[names(Male_model_avg) == "Estimate"] <- "Conditional average estimate"
-names(Male_model_avg)[names(Male_model_avg) == "Std..Error"] <- "Standard Error"
-names(Male_model_avg)[names(Male_model_avg) == "X2.5.."] <- "2.5% Interval"
-names(Male_model_avg)[names(Male_model_avg) == "X97.5.."] <- "97.5% Interval"
-
-pander(Male_model_avg, split.cell = 40, split.table = Inf)
+pander(Male_binary_model_avg, split.cell = 40, split.table = Inf, emphasize.strong.rows = (2), round = 3)
 
 ```
 
 
 
-```{r}
+
+```{r, eval=FALSE}
 
 # male_cond_plot_data <- Male_fitness %>% 
   # filter(Focal_male_offspring != 0)
@@ -1055,11 +926,13 @@ Male_cond_plot <- Male_fitness %>%
 
 Male_cond_plot
 
+# **Figure 8:** Male reproductive success relative to a standard _bw_ competitor is affected by the mtDNA of a social female competitor during larval development. Black points show the mean for each social haplotype and associated confidence intervals. Coloured points show individual males; the size of the point represents the number of offspring produced by both competitors. Data corresponds to the conditional component component of the zero-inflated model.
+
 ```
 
-**Figure 8:** Male reproductive success relative to a standard _bw_ competitor is affected by the mtDNA of a social female competitor during larval development. Black points show the mean for each social haplotype and associated confidence intervals. Coloured points show individual males; the size of the point represents the number of offspring produced by both competitors. Data corresponds to the conditional component component of the zero-inflated model.
 
-```{r, fig.width= 9, fig.height= 4, eval=FALSE}
+
+```{r, fig.width= 9, fig.height= 4}
 
 male_plot_data <- Male_fitness %>% 
   mutate(Social_survival = replace(as.character(Social_survival), Social_survival == "L", "Died as larva"),
@@ -1102,10 +975,9 @@ Male_social_plot <- male_plot_data %>%
 
 ggarrange(Male_focal_plot, Male_social_plot)
 
-
-# **Figure 8:** The proportion of offspring produced by focal males competing with standard _bw_ males, split by a) the males mtDNA haplotype and b) the mtDNA haplotype of a social competitor during development. Coloured points represent individual males, with larger points indicating a high number of offspring produced in the vial (sired by either male). Black points show the mean proportion of offspring sired by the focal male, with asssociated 95% confidence intervals. **Means are not adjusted for zero inflation**. 
-
 ```
+
+**Figure 8:** The proportion of offspring produced by focal males competing with standard _bw_ males, split by a) the males mtDNA haplotype and b) the mtDNA haplotype of a social competitor during development. Coloured points represent individual males, with larger points indicating a high number of offspring produced in the vial (sired by either male). Black points show the mean proportion of offspring sired by the focal male, with asssociated 95% confidence intervals.
 
 
 # Raw data and reproducibility
