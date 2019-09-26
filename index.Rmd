@@ -17,7 +17,7 @@ editor_options:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, cache = FALSE, warning = FALSE, message = FALSE)
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE, warning = FALSE, message = FALSE)
 ```
 
 # Supplementary methods
@@ -42,22 +42,17 @@ Here we include all code used to run our analysis, our rationale behind the mode
 library(lme4) # for the lmer and glmer mixed model functions
 library(lmerTest) # Used to get p-values for lmer models using simulation. It over-writes lmer() with a new version, which gives p-values
 library(glmmTMB) # for zero-inflated or hurdle glms
-library(brms) # for Bayesian models
 library(car) # for type III Anova's
 library(dplyr) # data re-shaping
 library(MuMIn) # for model selection and averaging
 library(ggplot2) # for plots
-library(ggThemeAssist) # a plot formatting add in
 library(ggridges) # for joy plots
-library(ggExtra) # for ggplot enhancements - primarily ggMarginal()
-library(ggstance) # for ggplot enhancements - can create more horizontal plots
 library(ggpubr) # for the ggarrange function
 library(ggbeeswarm) # violin plots with data points
 library(ggResidpanel) # for model assumption plots
 library(kableExtra) # nice tables that can scroll
 library(pander) # more nice tables
 library(stringr) # helps build functions
-library(forcats) # for changing the order of factors
 library(groupdata2) # for assigning rows in data-frames to groups
 
 # Read in data frame and add Dyad_environment column
@@ -196,8 +191,6 @@ Focal haplotype: the mtDNA haplotype that an individual carries.
 
 Social haplotype: the mtDNA haplotype that a social partner during larval development carries.
 
-Social survival: the survival outcome of the social partner.
-
 Sex: is the focal individual female or male? The social partner will always be of the opposite sex to the focal individual.
 
 We also include:
@@ -207,6 +200,8 @@ Duplicate: Each haplotype has been introgressed alongside the _w^1118^_ nuclear 
 **Random effects**
 
 Block: accounts for differences in the response variable between experimental blocks (e.g. to variance in temperature or composition of the fly food). In our experiment a Block contained multiple replicates and a replicate was made up of 25 different cells each housing a pair of larvae.
+
+Dyad environment: accounts for differences in the quality of the environment that pairs of larvae experienced. For example, the moisture content of the food varied between pipette tips, despite our best efforts to keep this variable constant.  
 
 **Model evaluation**
 
@@ -222,7 +217,7 @@ We fit a glm with binomial errors to model survival
 
 The model:
 
-**Survived ~ Focal_haplotype * Social_haplotype * Sex + Duplicate + (1|Block) + (1|Dyad_environment)**
+Survival ~ Focal_haplotype * Social_haplotype * Sex + Duplicate + (1|Block) + (1|Dyad_environment)
 
 ```{r survival model}
 
@@ -294,7 +289,10 @@ pander(survival_model_avg, split.cell = 40, split.table = Inf, emphasize.strong.
 ```
 
 
-```{r survival figure}
+```{r survival figure, fig.height=7, fig.width=10}
+
+# focal haplotype survival plot
+
 survival_mtDNA_summary <- survival %>% 
   dplyr::group_by(Focal_haplotype) %>%
   dplyr::summarise(number_surviving = sum(Survived), number_died = sum(Survived == 0)) %>%
@@ -304,19 +302,41 @@ survival_mtDNA_CIs <- get_CIs_for_binomial_trials(survival_mtDNA_summary$number_
 
 survival_mtDNA_summary <- cbind(survival_mtDNA_summary, survival_mtDNA_CIs)
 
-survival_mtDNA_summary %>%
+focal_survival_plot <- survival_mtDNA_summary %>%
   ggplot(aes(x = Focal_haplotype, y = Survived, fill = Focal_haplotype, colour = Focal_haplotype)) +
   geom_errorbar(data = survival_mtDNA_summary, aes(x = Focal_haplotype, ymax = upperCI, ymin = lowerCI, width = 0), colour = "black") +
   geom_point(data = survival_mtDNA_summary, aes(x = Focal_haplotype, y = Survived), size = 4, pch =21, colour='black', fill = c("Barcelona" = "#a50f15", "Brownsville" = "#fe9929", "Dahomey" = "#41b6c4", "Israel" = "#238443" , "Sweden" = "#4a1486")) +
-  labs(x = "mtDNA haplotype", y = "Proportion of larvae surviving to adulthood") +
+  labs(x = "Focal mtDNA haplotype", y = "Proportion of larvae surviving to adulthood") +
+  scale_y_continuous(limits = c(0.35, 0.525), breaks = c(0.35, 0.40, 0.45, 0.5)) +
   theme_minimal() +
   theme(legend.position = "none") +
   theme(panel.grid.major.x = element_blank())
+
+# social haplotype survival plot
+
+social_survival_mtDNA_summary <- survival %>% 
+  dplyr::group_by(Social_haplotype) %>%
+  dplyr::summarise(number_surviving = sum(Survived), number_died = sum(Survived == 0)) %>%
+  as.data.frame()
+
+social_survival_mtDNA_CIs <- get_CIs_for_binomial_trials(social_survival_mtDNA_summary$number_surviving, social_survival_mtDNA_summary$number_died) %>% rename(Survived = Proportion)
+
+social_survival_mtDNA_summary <- cbind(social_survival_mtDNA_summary, social_survival_mtDNA_CIs)
+
+social_survival_plot <- social_survival_mtDNA_summary %>%
+  ggplot(aes(x = Social_haplotype, y = Survived, fill = Social_haplotype, colour = Social_haplotype)) +
+  geom_errorbar(data = social_survival_mtDNA_summary, aes(x = Social_haplotype, ymax = upperCI, ymin = lowerCI, width = 0), colour = "black") +
+  geom_point(data = social_survival_mtDNA_summary, aes(x = Social_haplotype, y = Survived), size = 4, pch =21, colour='black', fill = c("Barcelona" = "#a50f15", "Brownsville" = "#fe9929", "Dahomey" = "#41b6c4", "Israel" = "#238443" , "Sweden" = "#4a1486")) +
+  labs(x = "Social mtDNA haplotype", y = "") +
+  scale_y_continuous(limits = c(0.35, 0.525), breaks = c(0.35, 0.40, 0.45, 0.5)) +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  theme(panel.grid.major.x = element_blank())
+
+ggarrange(focal_survival_plot, social_survival_plot, labels = c("a", "b"))
 ```
 
-**Figure 1:** The black points show the mean proportion of larvae surviving to eclose for each mtDNA haplotype and its 95% confidence limits.
-
-check these confidence intervals
+**Figure S2:** The points show the mean proportion of larvae surviving to eclose for each **a** focal haplotype and **b** social haplotype, and their associated 95% confidence limits.
 
 ### Development time analysis
 
@@ -330,8 +350,8 @@ density_development_plot <- ggplot(larval_development)+
   geom_vline(xintercept = 286, linetype = 2) +
   xlab("Egg-to-adult development time (hours)") +
   ylab("Kernel density estimate") +
-  theme_bw()+
-   scale_fill_manual(values = c("F" = "#e41a1c", "M" = "#377eb8"), labels = c("Female", "Male")) +
+  theme_bw() +
+  scale_fill_manual(values = c("F" = "#e41a1c", "M" = "#377eb8"), labels = c("Female", "Male")) +
   scale_x_continuous(limits = c(220, 310), breaks = c(220, 230, 240, 250, 260, 270, 280, 290, 300, 310)) +
   scale_y_discrete(expand = c(.0,0.0))+
   theme(panel.spacing = unit(0.1, "lines"),
@@ -349,7 +369,7 @@ density_development_plot
 
 ```
 
-**Figure S2**: The distribution of egg-to-adult development time, split by sex. Dashed lines indicate when lights were turned each morning and highlight the relationship between light and eclosion.
+**Figure S3**: The distribution of egg-to-adult development time, split by sex. Dashed lines indicate when lights were turned each morning and highlight the relationship between light and eclosion.
 
 The response variable has a trimodal distribution, that can be potentially explained by the lab's artificial day-night cycle. When the lights turn on at 7am, eclosion is stimulated.
 
@@ -455,8 +475,7 @@ larval_development_plot_data %>%
  #geom_point(data = survival_mtDNA_summary, aes(x = Focal_haplotype, y = Survived), size = 4, pch =21, colour='black', fill = c("Barcelona" = "#a50f15", "Brownsville" = "#fe9929", "Dahomey" = "#41b6c4", "Israel" = "#238443" , "Sweden" = "#4a1486")) +
 ```
 
-**Figure 2:** Egg-to-adult development time is affected by an individual's mtDNA haplotype. The coloured points show the development time for individual flies. The black points show the median development time for males and females and its 95% confidence limits.
-
+**Figure S4:** Egg-to-adult development time is affected by an individual's mtDNA haplotype. The coloured points show the development time for individual flies. The black points show the mean development time for males and females and its 95% confidence limits.
 
 ## Adult fitness measures
 
@@ -484,7 +503,6 @@ body_size_model<- lmer(Wing_length ~ Focal_haplotype * Social_haplotype * Sex + 
 
 resid_panel(body_size_model)
 ```
-
 
 #### Model evaluation
 
@@ -544,7 +562,7 @@ pander(Size_model_avg, split.cell = 40, split.table = Inf, emphasize.strong.rows
 ```
 
 
-**Table S4:** Wing length for males and females pooled across the experimental _mt_-strains. We also measured the wings of a subset of the _bw_ males used in the male adult fitness assay. The size descrepency between the _bw_ flies raised in vials at a moderate density (100 larvae per vial) and the _mt_-strains raised in highly competitive resource poor environments is evident.   
+**Table S4:** Wing length for males and females pooled across the experimental _mt_-strains. We also measured the wings of a subset of the _bw_ males used in the male adult fitness assay. The size descrepency between the _bw_ flies raised in vials at a moderate density (100 larvae per vial) and the _mt_-strains raised in highly competitive, resource poor, environments is evident.   
 
 ```{r size plot and table}
 body_size_plot_data <- body_size %>% 
@@ -565,7 +583,7 @@ bw_wing_summary <- bw_wing_summary[, c(5, 1, 2, 3, 4)]
 rbind(body_size_summary, bw_wing_summary) %>% pander(split.cell = 30, split.table = Inf, col.names = c("Sex", "Mean wing length", "Lower 95% CI", "Upper 95% CI", "n"))
 
 
-body_size_plot_data %>%
+size_plot <- body_size_plot_data %>%
   ggplot(aes(x = Sex, y = Wing_length, fill = Sex, colour = Sex)) +
   geom_quasirandom(data = body_size_plot_data, width = 0.3, size = 2, alpha =  0.5) +
   scale_colour_manual(values = c("Female" = "#fe9929", "Male" = "#41b6c4")) +
@@ -576,9 +594,10 @@ body_size_plot_data %>%
   theme(legend.position = "none") +
   theme(panel.grid.major.x = element_blank())
 
+#**Figure 5:** Sex affects wing length. The coloured points show the wing length for individual _mt_-strain flies. The black points show the mean wing length for males and females and its 95% confidence limits.
+
 ```
 
-**Figure 5:** Sex affects wing length. The coloured points show the wing length for individual _mt_-strain flies. The black points show the mean wing length for males and females and its 95% confidence limits.
 
 
 ### Female reproductive output
@@ -752,11 +771,12 @@ female_focal_cond_plot <- female_cond_plot_data %>%
   theme(legend.position = "none") +
   theme(panel.grid.major.x = element_blank())
 
-ggarrange(female_focal_zi_plot, female_focal_cond_plot, female_social_zi_plot, female_social_cond_plot)
+ggarrange(female_focal_zi_plot, female_focal_cond_plot, female_social_zi_plot, female_social_cond_plot, labels = c("a", "b", "c", "d"))
 
 ```
 
-**Figure 6:** mtDNA affects the direct and inclusive components of fitness. Panels a and b show the direct effect of mtDNA on female fitness, for the hurdle (binomial - did the female produce any offspring) and conditional (gaussian - how many offspring did the female produce) components of the model respectively. Panels c and d show the social effect of mtDNA on female fitness. Black points show the mean for each focal/social haplotype and associated confidence intervals. 
+**Figure 1:** mtDNA affects the direct and inclusive components of fitness. Panels **a** and **b** show the direct effect of mtDNA on female fitness, for the hurdle (did the female produce any offspring?) and conditional (how many offspring did the female produce?) components of the model respectively. Panels **c** and **d** show the social effect of mtDNA on female fitness. **a** and **c** Points show the mean for each focal/social haplotype and associated confidence intervals. **b** and **d** Black points show the mean for each haplotype, while coloured points represent each individual data point.
+
 
 ### Male adult fitness
 
@@ -835,7 +855,7 @@ pander(Male_binary_model_avg, split.cell = 40, split.table = Inf, emphasize.stro
 ```
 
 
-```{r male figure, fig.width= 9, fig.height= 4}
+```{r male figure, fig.width= 8.5, fig.height= 6}
 
 Male_fitness_summary_socialmt <- Male_fitness %>% 
   group_by(Social_haplotype) %>%
@@ -853,7 +873,7 @@ Male_focal_plot <- Male_fitness %>%
   scale_colour_manual(values = c("Barcelona" = "#a50f15", "Brownsville" = "#fe9929", "Dahomey" = "#41b6c4", "Israel" = "#238443" , "Sweden" = "#4a1486")) +
   geom_point(data = Male_fitness_summary_focalmt, aes(x = Focal_haplotype, y = Proportion_focal), size = 3, colour='black') +
   geom_errorbar(data = Male_fitness_summary_focalmt, aes(x = Focal_haplotype, ymax = Upper, ymin = Lower, width = 0), colour = "black") +
-  labs(x = "Focal mtDNA haplotype", y = "Proportion of offspring sired by focal male") +
+  labs(x = "Focal male mtDNA haplotype", y = "Proportion of offspring sired by focal male") +
   theme_minimal() +
   theme(legend.position = "none") +
   theme(panel.grid.major.x = element_blank())
@@ -866,16 +886,15 @@ Male_social_plot <- Male_fitness %>%
   scale_colour_manual(values = c("Barcelona" = "#a50f15", "Brownsville" = "#fe9929", "Dahomey" = "#41b6c4", "Israel" = "#238443" , "Sweden" = "#4a1486")) +
   geom_point(data = Male_fitness_summary_socialmt, aes(x = Social_haplotype, y = Proportion_focal), size = 3, colour='black') +
   geom_errorbar(data = Male_fitness_summary_socialmt, aes(x = Social_haplotype, ymax = Upper, ymin = Lower, width = 0), colour = "black") +
-  labs(x = "Social mtDNA haplotype", y = "Proportion of offspring sired by focal male") +
+  labs(x = "Social female mtDNA haplotype", y = "") +
   theme_minimal() +
   theme(legend.position = "none") +
   theme(panel.grid.major.x = element_blank())
-
-ggarrange(Male_focal_plot, Male_social_plot)
+ggarrange(Male_focal_plot, Male_social_plot, labels = c("a", "b"))
 
 ```
 
-**Figure 8:** The proportion of offspring produced by focal males competing with standard _bw_ males, split by a) the males mtDNA haplotype and b) the mtDNA haplotype of a social competitor during development. Coloured points represent individual males, with larger points indicating a high number of offspring produced in the vial (sired by either male). Black points show the mean proportion of offspring sired by the focal male, with asssociated 95% confidence intervals.
+**Figure 2:** The proportion of offspring produced by focal males competing with standard _bw_ males, split by **a** the males mtDNA haplotype and **b** the mtDNA haplotype of a female social competitor during development. Coloured points represent individual males, with larger points indicating a high number of offspring produced in the vial (sired by either male). Black points show the mean proportion of offspring sired by the focal male, with asssociated 95% confidence intervals.
 
 
 # Raw data and reproducibility
