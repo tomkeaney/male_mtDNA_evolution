@@ -17,7 +17,7 @@ editor_options:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, cache = TRUE, warning = FALSE, message = FALSE)
+knitr::opts_chunk$set(echo = TRUE, cache = FALSE, warning = FALSE, message = FALSE)
 ```
 
 # Supplementary methods
@@ -873,7 +873,7 @@ Male_focal_plot <- Male_fitness %>%
   scale_colour_manual(values = c("Barcelona" = "#a50f15", "Brownsville" = "#fe9929", "Dahomey" = "#41b6c4", "Israel" = "#238443" , "Sweden" = "#4a1486")) +
   geom_point(data = Male_fitness_summary_focalmt, aes(x = Focal_haplotype, y = Proportion_focal), size = 3, colour='black') +
   geom_errorbar(data = Male_fitness_summary_focalmt, aes(x = Focal_haplotype, ymax = Upper, ymin = Lower, width = 0), colour = "black") +
-  labs(x = "Focal male mtDNA haplotype", y = "Proportion of offspring sired by focal male") +
+  labs(x = "Male mtDNA haplotype", y = "Proportion of offspring sired by focal male") +
   theme_minimal() +
   theme(legend.position = "none") +
   theme(panel.grid.major.x = element_blank())
@@ -894,7 +894,7 @@ ggarrange(Male_focal_plot, Male_social_plot, labels = c("a", "b"))
 
 ```
 
-**Figure 2:** The proportion of offspring produced by focal males competing with standard _bw_ males, split by **a** the males mtDNA haplotype and **b** the mtDNA haplotype of a female social competitor during development. Coloured points represent individual males, with larger points indicating a high number of offspring produced in the vial (sired by either male). Black points show the mean proportion of offspring sired by the focal male, with asssociated 95% confidence intervals.
+**Figure 2**: The proportion of offspring produced by _mt_-strain males competing with standard _bw_ males. **a** shows the direct effect of mtDNA on male fitness. **b** shows the indirect genetic effect of mtDNA on male fitness. Coloured points represent individual males, with larger points indicating a higher number of offspring produced in the vial (sired by either male). Black points show the mean proportion of offspring sired by the mt-strain male, with associated 95% confidence intervals.
 
 
 # Raw data and reproducibility
@@ -928,7 +928,7 @@ Columns represent:
 
 **Social_haplotype:** what mtDNA haplotype did the social competitor of the focal individual carry?
 
-**Survived:** did the focal individual die as a larva (L), as a pupa (P) or survive to adutlhood (N)?
+**Survived:** did the focal individual survive to adulthood (1) or die during larval development (0)?
 
 **Social_survival:** did the social competitor die as a larva (L), as a pupa (P) or survive to adutlhood (N)?
 
