@@ -475,7 +475,7 @@ larval_development_plot_data %>%
  #geom_point(data = survival_mtDNA_summary, aes(x = Focal_haplotype, y = Survived), size = 4, pch =21, colour='black', fill = c("Barcelona" = "#a50f15", "Brownsville" = "#fe9929", "Dahomey" = "#41b6c4", "Israel" = "#238443" , "Sweden" = "#4a1486")) +
 ```
 
-**Figure S4:** Egg-to-adult development time is affected by an individual's mtDNA haplotype. The coloured points show the development time for individual flies. The black points show the mean development time for males and females and its 95% confidence limits.
+**Figure S4:** Egg-to-adult development time is affected by an individual's mtDNA haplotype. The coloured points show the development time for individual flies. The black points show the mean development time for males and females and its 95% confidence limits. Dashed lines illustrate the point at which lights were turned on each morning.
 
 ## Adult fitness measures
 
