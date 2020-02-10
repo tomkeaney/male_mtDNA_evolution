@@ -533,7 +533,7 @@ female_hurdle_model <- glmmTMB(Maternal_total_offspring ~ Social_haplotype * Foc
 
 #### Model evaluation
 
-**Table S5**: Evaluation of the female reproductive output model. All possible models were evaluated from the global model that included an interaction between Focal haplotype and Social haplotype and the random factors Strain and Block. As there was no clear top model, the final model was calculated via model averaging. The zero-inflated results correspond to question (1), while the conditional results correspond to question (2) above.
+**Table S4**: Evaluation of the female reproductive output model. All possible models were evaluated from the global model that included an interaction between Focal haplotype and Social haplotype and the random factors Strain and Block. As there was no clear top model, the final model was calculated via model averaging. The zero-inflated results correspond to question (1), while the conditional results correspond to question (2) above.
 ```{r female dredge table}
 # Compare all possible combinations of models (from the global model)
 
@@ -750,6 +750,7 @@ _(Focal_male_offspring, bw_offspring) ~ Focal_haplotype * Social_haplotype + (1|
 ```{r male model}
 Male_fitness_without_Brownsville <- Male_fitness %>%
   filter(Focal_haplotype != "Brownsville")
+  
 
 response <- cbind(Male_fitness_without_Brownsville$Focal_male_offspring, Male_fitness_without_Brownsville$bw_male_offspring)
 
@@ -762,7 +763,7 @@ Binary_male_model <- lme4::glmer(response ~ Focal_haplotype * Social_haplotype +
 #### Model evaluation
 
 
-**Table S6**: Evaluation of the male adult fitness model. All possible models were evaluated from the global model that included an interaction between focal haplotype and social haplotype and the random factors Strain, Block and Individual. As there was no clear top model, the final model was calculated via model averaging.
+**Table S5**: Evaluation of the male adult fitness model. All possible models were evaluated from the global model that included an interaction between focal haplotype and social haplotype and the random factors Strain, Block and Individual. As there was no clear top model, the final model was calculated via model averaging.
 ```{r male dredge table}
 male_binary_dredge <- dredge(Binary_male_model)
 
