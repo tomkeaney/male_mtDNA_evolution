@@ -35,6 +35,8 @@ Here we include all code used to run our analysis, our rationale behind the mode
 
 #### Load packages, read in the data and create some helpful functions
 
+**EDIT THE PACKAGE LIST WHEN HAPPY WITH THE ANALYSIS**
+
 ```{r packages data and functions}
 
 # load relevant packages
@@ -42,43 +44,41 @@ Here we include all code used to run our analysis, our rationale behind the mode
 library(lme4) # for the lmer and glmer mixed model functions
 library(lmerTest) # Used to get p-values for lmer models using simulation. It over-writes lmer() with a new version, which gives p-values
 library(glmmTMB) # for zero-inflated or hurdle glms
-library(car) # for type III Anova's
-library(dplyr) # data re-shaping
 library(MuMIn) # for model selection and averaging
-library(ggplot2) # for plots
+library(tidyverse) # data re-shaping, ggplot, stringr and more
 library(ggridges) # for joy plots
 library(ggpubr) # for the ggarrange function
 library(ggbeeswarm) # violin plots with data points
 library(ggResidpanel) # for model assumption plots
 library(kableExtra) # nice tables that can scroll
 library(pander) # more nice tables
-library(stringr) # helps build functions
 library(groupdata2) # for assigning rows in data-frames to groups
 
 # Read in data frame and add Dyad_ID column
 
 all_data <- read.csv("mtDNA_larval_competition_data.csv") %>% 
   arrange(Individual) %>%
-  mutate(duplicate = str_extract(Strain, "[:digit:]")) %>%
   group(n = 2, method = "greedy") %>% rename(Dyad_ID = .groups)
 
-# Read in the bw male wing data
-
-bw_male_wing_data <- read.csv("bw_male_wing_data.csv")
-
-# Create a function for standard error - generally useful and needed for later
-
-SE <- function(x) sd(x)/sqrt(length(x))
-
-# helper for saving stuff and naming the file object.rds
+# helper for saving large model objects and naming the file object.rds
 
 save_it <- function(object){
   saveRDS(get(object), file = paste(object, ".rds", sep = ""))}
+
+
+
+# **THIS MIGHT BE DELETED**
 
 # Define a standard dodge for the error bar plots
 
 pd <- position_dodge(0.75) # move them 0.3 to the left and right
 
+
+# **THIS IS LIKELY TO BE CUT IF WE CAN DERIVE MARGINAL MEANS FROM MODELS**
+
+# Create a function for standard error - generally useful and needed for later
+
+SE <- function(x) sd(x)/sqrt(length(x))
 
 # function for finding CIs for binomial data
 
@@ -110,9 +110,9 @@ get_CIs_for_binomial_trials <- function(success, failure){
 
 # Select the columns we're interested in and rename them
 
-fitness_data <- dplyr::select(all_data, Individual, Block, Strain,  Dyad_ID, Sex, Focal.haplotype, Social.haplotype, Mortality,  Social.Survival, Development.time..hrs., Day.emerged, Hours.from.lights.on, Wing.size..mm., Female.offspring, Male.offspring, Total.female.assay, Total.red.all.vials, Total.bw.all.vials, Proportion.red.all.vials) %>% 
+fitness_data <- dplyr::select(all_data, Individual, Block, Strain,  Dyad_ID, Sex, Focal.haplotype, Social.haplotype, Mortality, Development.time..hrs., Wing.size..mm., Female.offspring, Male.offspring, Total.female.assay, Total.red.all.vials, Total.bw.all.vials, Proportion.red.all.vials) %>% 
   
-rename(Block = Block, Day = Day.emerged, Hours = Hours.from.lights.on, Survived = Mortality, Focal_haplotype = Focal.haplotype, Social_haplotype = Social.haplotype, Social_survival = Social.Survival, Dev_time = Development.time..hrs., Wing_length = Wing.size..mm., Maternal_female_offspring = Female.offspring, Maternal_male_offspring = Male.offspring, Maternal_total_offspring = Total.female.assay, Paternal_focal_offspring = Total.red.all.vials, Paternal_bw_offspring = Total.bw.all.vials, Proportion_focal = Proportion.red.all.vials)
+rename(Block = Block, Survived = Mortality, Focal_haplotype = Focal.haplotype, Social_haplotype = Social.haplotype, Dev_time = Development.time..hrs., Wing_length = Wing.size..mm., Maternal_female_offspring = Female.offspring, Maternal_male_offspring = Male.offspring, Maternal_total_offspring = Total.female.assay, Paternal_focal_offspring = Total.red.all.vials, Paternal_bw_offspring = Total.bw.all.vials, Proportion_focal = Proportion.red.all.vials)
 
 # Define new levels for mortality to make renaming possible 
 
@@ -141,7 +141,7 @@ fitness_data$Survived <- as.numeric(as.character(fitness_data$Survived))
 
 # Create specific datasets for each fitness trait
 
-# Remove all rows that contain an NA value in the survival column. The NAs mean things like the GFP sorting did not work, or the vial was never even set up due to a shortage of larvae. They are not meaningful data, and we remove them here.
+# Remove all rows that contain an NA value in the survival column. The NAs mean things like the GFP sorting did not work, or the vial was never set up due to a shortage of larvae. They are not meaningful data, and we remove them here.
 
 survival <- fitness_data %>% filter(!is.na(Survived)) 
   
@@ -153,7 +153,7 @@ larval_development <- fitness_data %>% filter(!is.na(Dev_time))
 
 body_size <- fitness_data %>% filter(!is.na(Wing_length)) 
 
-# Remove all rows that contain an NA value in the female reproductive output column, and where females did not survive to adulthood (coded as producing 0 offspring). 
+# Remove all rows that contain an NA value in the female reproductive output column (e.g. all the males), and where females did not survive to adulthood (coded as producing 0 offspring). 
 
 female_reproductive_output <- fitness_data %>% filter(!is.na(Maternal_total_offspring), Survived == 1)
 
@@ -168,7 +168,7 @@ Male_fitness <- fitness_data %>% filter(!is.na(Paternal_focal_offspring))
 
 Male_fitness$Offspring_counted <- Male_fitness$Paternal_focal_offspring + Male_fitness$Paternal_bw_offspring
 
-# Now lets remove vials where the female produced 0 offspring (this includes trials where the male died in development), as we cannot determine paternity from these vials
+# Now lets remove vials where the female produced 0 offspring (this includes trials where the male died in development), as we cannot determine paternity from these vials. The tidy up the dataframe by removing unneccessary columns
 
 Male_fitness <- Male_fitness %>% filter(!(Offspring_counted == 0)) %>% 
   select(-Maternal_female_offspring, -Maternal_male_offspring, -Maternal_total_offspring) %>% 
@@ -183,7 +183,7 @@ We analysed the data using generalised linear mixed models in the `lmer` package
 
 **Fixed effects**
 
-For the analysis of fitness traits expressed in both sexes (survival, development time and body size), we are interested in the effect of an individual’s focal mtDNA, the mtDNA of a social competitor, the effect of a social competitors success, and the effect of sex on fitness. To identify these potential effects each model contained the following fixed effects, and interactions where biologically relevant:
+For the analysis of fitness traits expressed in both sexes (survival, development time and body size), we are interested in the effect of an individual’s focal mtDNA, the mtDNA of a social competitor and the effect of sex on fitness. To identify these potential effects each model contained the following fixed effects and the three-way interaction between these variables:
 
 Focal haplotype: the mtDNA haplotype that an individual carries.
 
@@ -193,27 +193,28 @@ Sex: is the focal individual female or male? The social partner's sex was always
 
 **Random effects**
 
-Duplicate strain: Each haplotype has been introgressed alongside the _w^1118^_ nuclear background in two independent duplicates, creating 10 total strains. Within each block we ran multiple replicates that were split in two: half used only duplicate one, while the other half used only duplicate two. This random effect accounts for any residual differences in their nuclear genome, or differences in the epigenome or microbiome that may have arisen between duplicates.
+Duplicate strain: Each haplotype has been introgressed alongside the _w^1118^_ nuclear background in two independent duplicates, creating 10 total strains. Within each block we ran multiple replicates that were made up of flies from the first set of strains (i.e. Barcelona 1, Brownsville 1 etc.), while the other half used only flies from strains denoted '2'. This random effect accounts for any residual differences in their nuclear genome, epigenome, microbiome or vial environment that may have arisen between duplicates.
 
-Block: accounts for differences in the response variable between experimental blocks (e.g. to variance in temperature or composition of the fly food). In our experiment a Block contained multiple replicates and a replicate was made up of 25 different cells each housing a pair of larvae.
+Block: accounts for differences in the response variable between experimental blocks (e.g. to variance in temperature or composition of the fly food). In our experiment a block contained multiple replicates and a replicate was made up of 25 different cells each housing a pair of larvae.
 
-Dyad ID: accounts for differences in the quality of the environment that pairs of larvae experienced. For example, the moisture content of the food varied between pipette tips, despite our best efforts to keep this variable constant.  
+Dyad ID: accounts for differences in the quality of the larval environment between pairs of larvae. For example, the moisture content of the food varied between pipette tips, despite our best efforts to keep this variable constant.  
 
 **Model evaluation**
 
-Each model was evaluated via AICc values using the `dredge` function, from the `Mumin` package. There was rarely a single model that was unequivocally the best fit to the data, so we conducted model averaging for the set of models where delta was < 6, as suggested by Symonds and Moussalli [-@RN455]. The present study is a planned experiment to measure the effect of mtDNA on fitness, so we derived model estimates from the conditional model averages.
+Each model was evaluated and ranked by AICc values using the `dredge` function, from the `Mumin` package. There was rarely a single model that was unequivocally the best fit to the data, so we conducted model averaging for the set of models where delta was < 6, as suggested by Symonds and Moussalli [-@RN455]. The present study is a planned experiment to measure the effect of mtDNA on fitness, so we derived model estimates from the conditional model averages.
 
 
 ## Larval fitness measures
 
 
 ### Egg to adult viability analysis
+* * *
 
 We fit a glm with binomial errors to model survival
 
 The model:
 
-**Survival ~ Focal_haplotype * Social_haplotype * Sex + (1|Strain) + (1|Block) + (1|Dyad_ID)**
+_Survival ~ Focal_haplotype * Social_haplotype * Sex + (1|Strain) + (1|Block) + (1|Dyad_ID)_
 
 ```{r survival model}
 
@@ -230,17 +231,16 @@ survival_model <- lme4::glmer(Survived ~ Focal_haplotype * Social_haplotype * Se
 
 # Compare all possible combinations of models (from the global model)
 
-if(file.exists("survival_dredge_strain.rds")){ # If already done, just load the results
-  survival_dredge_strain <- readRDS("survival_dredge_strain.rds")
-} else {survival_dredge_strain <- dredge(survival_model)                  # If not already done, run all the models and save the results
-lapply(c("survival_dredge_strain"), save_it)
+if(file.exists("survival_dredge.rds")){ # If already done, just load the results
+  survival_dredge <- readRDS("survival_dredge.rds")
+} else {survival_dredge <- dredge(survival_model) # If not already done, run all the models and save the results
+lapply(c("survival_dredge"), save_it)
 }
 
 
-survival_table <- subset(survival_dredge_strain, delta < 6, recalc.weights = FALSE) %>% as.data.frame()
+survival_table <- subset(survival_dredge, delta < 6, recalc.weights = FALSE) %>% as.data.frame()
 
 names(survival_table)[names(survival_table) == "(Intercept)"] <- "Intercept"
-#names(survival_table)[names(survival_table) == "factor(Duplicate)"] <- "Duplicate"
 names(survival_table)[names(survival_table) == "Focal_haplotype"] <- "Focal haplotype"
 names(survival_table)[names(survival_table) == "Sex"] <- "Sex"
 names(survival_table)[names(survival_table) == "Social_haplotype"] <- "Social haplotype"
@@ -260,18 +260,28 @@ pander(survival_table, split.cell = 40, split.table = Inf)
 #### Model averaging
 
 
-**Table 1**: Conditional model coefficients, standard error and 95% confidence limits are shown for the survivorship to adulthood averaged model. Bold rows indicate significant effects.
+Conditional model coefficients, standard error and 95% confidence limits listed in **Table 1** are shown for the survivorship to adulthood averaged model. Bold rows indicate significant effects.
+
 ```{r survival model averaging}
 
-# first get the RVI for each predictor
+# Model average
 
-RVI_survival <- MuMIn::sw(survival_dredge_strain)
+# We need to create the top_survival_models object and average from that so that we can get mean estimates successfully using predict(), fitted() or eemeans()
+
+top_survival_models <- get.models(survival_dredge, subset = delta < 6)
+
+survival_avgm <- model.avg(top_survival_models)
+
+
+# extract useful information
+
+RVI_survival <- MuMIn::sw(survival_dredge)
 
 # average the models with delta < 6
 
-survival_CIs <- confint(model.avg(survival_dredge_strain, subset = delta < 6)) %>% as.data.frame()
+survival_CIs <- confint(model.avg(survival_dredge, subset = delta < 6)) %>% as.data.frame()
 
-survival_estimate <- coefTable(model.avg(survival_dredge_strain, subset = delta < 6)) %>% as.data.frame()
+survival_estimate <- coefTable(model.avg(survival_dredge, subset = delta < 6)) %>% as.data.frame()
 
 survival_model_avg <- data.frame(survival_estimate, survival_CIs) %>% select(Estimate, Std..Error,  X2.5.., X97.5..)
 
@@ -289,61 +299,11 @@ pander(survival_model_avg, split.cell = 40, split.table = Inf, round = 3)
 
 ```
 
-
-```{r survival figure, fig.height=7, fig.width=10}
-
-# focal haplotype survival plot
-
-survival_mtDNA_summary <- survival %>% 
-  dplyr::group_by(Focal_haplotype) %>%
-  dplyr::summarise(number_surviving = sum(Survived), number_died = sum(Survived == 0)) %>%
-  as.data.frame()
-
-survival_mtDNA_CIs <- get_CIs_for_binomial_trials(survival_mtDNA_summary$number_surviving, survival_mtDNA_summary$number_died) %>% rename(Survived = Proportion)
-
-survival_mtDNA_summary <- cbind(survival_mtDNA_summary, survival_mtDNA_CIs)
-
-focal_survival_plot <- survival_mtDNA_summary %>%
-  ggplot(aes(x = Focal_haplotype, y = Survived, fill = Focal_haplotype, colour = Focal_haplotype)) +
-  geom_errorbar(data = survival_mtDNA_summary, aes(x = Focal_haplotype, ymax = upperCI, ymin = lowerCI, width = 0), colour = "black") +
-  geom_point(data = survival_mtDNA_summary, aes(x = Focal_haplotype, y = Survived), size = 4, pch =21, colour='black', fill = c("Barcelona" = "#a50f15", "Brownsville" = "#fe9929", "Dahomey" = "#41b6c4", "Israel" = "#238443" , "Sweden" = "#4a1486")) +
-  labs(x = "Focal mtDNA haplotype", y = "Proportion of larvae surviving to adulthood") +
-  scale_y_continuous(limits = c(0.35, 0.525), breaks = c(0.35, 0.40, 0.45, 0.5)) +
-  theme_minimal() +
-  theme(legend.position = "none") +
-  theme(panel.grid.major.x = element_blank())
-
-# social haplotype survival plot
-
-social_survival_mtDNA_summary <- survival %>% 
-  dplyr::group_by(Social_haplotype) %>%
-  dplyr::summarise(number_surviving = sum(Survived), number_died = sum(Survived == 0)) %>%
-  as.data.frame()
-
-social_survival_mtDNA_CIs <- get_CIs_for_binomial_trials(social_survival_mtDNA_summary$number_surviving, social_survival_mtDNA_summary$number_died) %>% rename(Survived = Proportion)
-
-social_survival_mtDNA_summary <- cbind(social_survival_mtDNA_summary, social_survival_mtDNA_CIs)
-
-social_survival_plot <- social_survival_mtDNA_summary %>%
-  ggplot(aes(x = Social_haplotype, y = Survived, fill = Social_haplotype, colour = Social_haplotype)) +
-  geom_errorbar(data = social_survival_mtDNA_summary, aes(x = Social_haplotype, ymax = upperCI, ymin = lowerCI, width = 0), colour = "black") +
-  geom_point(data = social_survival_mtDNA_summary, aes(x = Social_haplotype, y = Survived), size = 4, pch =21, colour='black', fill = c("Barcelona" = "#a50f15", "Brownsville" = "#fe9929", "Dahomey" = "#41b6c4", "Israel" = "#238443" , "Sweden" = "#4a1486")) +
-  labs(x = "Social mtDNA haplotype", y = "") +
-  scale_y_continuous(limits = c(0.35, 0.525), breaks = c(0.35, 0.40, 0.45, 0.5)) +
-  theme_minimal() +
-  theme(legend.position = "none") +
-  theme(panel.grid.major.x = element_blank())
-
-ggarrange(focal_survival_plot, social_survival_plot, labels = c("a", "b"))
-```
-
-**Figure S2:** The points show the mean proportion of larvae surviving to eclose for each **a** focal haplotype and **b** social haplotype, and their associated 95% confidence limits.
-
 ### Development time analysis
-
+* * *
 
 ```{r dev time density plot}
-
+(
 density_development_plot <- ggplot(larval_development)+
   stat_density_ridges(aes(x=Dev_time, y = NA, fill = Sex), alpha = 0.7, scale = 12, position = position_nudge(y = -0.5), show.legend = T) +
   geom_vline(xintercept = 238, linetype = 2) +
@@ -352,7 +312,7 @@ density_development_plot <- ggplot(larval_development)+
   xlab("Egg-to-adult development time (hours)") +
   ylab("Kernel density estimate") +
   theme_bw() +
-  scale_fill_manual(values = c("F" = "#e41a1c", "M" = "#377eb8"), labels = c("Female", "Male")) +
+  scale_fill_manual(values = c("F" = "#ca562c", "M" = "#008080"), labels = c("Female", "Male")) +
   scale_x_continuous(limits = c(220, 310), breaks = c(220, 230, 240, 250, 260, 270, 280, 290, 300, 310)) +
   scale_y_discrete(expand = c(.0,0.0))+
   theme(panel.spacing = unit(0.1, "lines"),
@@ -366,17 +326,18 @@ density_development_plot <- ggplot(larval_development)+
         axis.text.y=element_blank(),
         axis.ticks.y=element_blank(),
         axis.title.x = element_text(hjust = 0.5, size = 14))
-density_development_plot
+)
+
 
 ```
 
-**Figure S3**: The distribution of egg-to-adult development time, split by sex. Dashed lines indicate when lights were turned each morning and highlight the relationship between light and eclosion.
+**Figure S2**: The distribution of egg-to-adult development time, split by sex. Dashed lines indicate when lights were turned each morning and highlight the relationship between light and eclosion.
 
 The response variable has a trimodal distribution, that can be potentially explained by the lab's artificial day-night cycle. When the lights turn on at 7am, eclosion is stimulated.
 
 The model:
 
-**Dev_time ~ Focal_haplotype * Social_haplotype * Sex + (1|Strain) + (1|Block) + (1|Dyad_ID)**
+_Dev_time ~ Focal_haplotype * Social_haplotype * Sex + (1|Strain) + (1|Block) + (1|Dyad_ID)_
 
 ```{r dev time model}
 
@@ -392,7 +353,7 @@ Lets have a look at model diagnostics
 resid_panel(linear_dev_model)
 ```
 
-Despite the data being trimodal, the linear model appears to fit the data adequately. The residuals vs fitted plot indicates that the mean and variance share no relationship. The Q-Q Plot shows that points fall off at the extremes, but generally conform to a linear pattern.
+The data is trimodal and the residuals vs fitted plot indicates that the mean and variance are weakly positively correlated. The Q-Q Plot shows that points fall off at the extremes, but generally conform to a linear pattern. Linear models are somewhat robust against slightly non-normal data so we proceed with the analysis.
 
 #### Model evaluation
 
@@ -405,7 +366,6 @@ Dev_time_linear_dredge <- dredge(linear_dev_model)
 development_table <- subset(Dev_time_linear_dredge, delta < 6, recalc.weights = FALSE)  %>% as.data.frame()
 
 names(development_table)[names(development_table) == "(Intercept)"] <- "Intercept"
-#names(development_table)[names(development_table) == "(factor(Duplicate))"] <- "Duplicate"
 names(development_table)[names(development_table) == "Focal_haplotype"] <- "Focal haplotype"
 names(development_table)[names(development_table) == "Social_haplotype"] <- "Social haplotype"
 names(development_table)[names(development_table) == "Focal_haplotype:Sex"] <- "Focal haplotype x Sex"
@@ -424,7 +384,8 @@ pander(development_table, split.cell = 40, split.table = Inf)
 
 #### Model averaging
 
-**Table 2:** Conditional model coefficients, standard error and 95% confidence limits are shown for the egg-to-adult development time averaged model. Bold rows indicate significant effects.
+Conditional model coefficients, standard error and 95% confidence limits listed in **Table 2** are shown for the egg-to-adult development time averaged model. Bold rows indicate significant effects.
+
 ```{r dev time model averaging}
 
 # first get the RVI for each predictor
@@ -453,51 +414,26 @@ pander(Dev_model_avg, split.cell = 40, split.table = Inf, emphasize.strong.rows 
 
 ```
 
-```{r dev time plot}
-
-larval_development_plot_data <- larval_development %>% 
-  mutate(Sex = replace(as.character(Sex), Sex == "F", "Female"),
-         Sex = replace(as.character(Sex), Sex == "M", "Male"))
-
-
-development_mtDNA_summary <- larval_development_plot_data %>% 
-  dplyr::group_by(Focal_haplotype) %>%
-  dplyr::summarise(Mean_Dev_time = mean(Dev_time), Lower = (Mean_Dev_time - SE(Dev_time)* 1.96), Upper = (Mean_Dev_time + SE(Dev_time)*1.96), n = n()) %>% rename(Dev_time = Mean_Dev_time)
-
-
-larval_development_plot_data %>%
-  ggplot(aes(x = Focal_haplotype, y = Dev_time, fill = Focal_haplotype, colour = Focal_haplotype)) +
-  geom_quasirandom(data = larval_development_plot_data, width = 0.3, size = 2, alpha =  0.3) +
-  scale_colour_manual(values = c("Barcelona" = "#a50f15", "Brownsville" = "#fe9929", "Dahomey" = "#41b6c4", "Israel" = "#238443" , "Sweden" = "#4a1486")) +
-  geom_point(data = development_mtDNA_summary, aes(x = Focal_haplotype, y = Dev_time), size = 3, colour='black') +
-  geom_errorbar(data = development_mtDNA_summary, aes(x = Focal_haplotype, ymax = Upper, ymin = Lower, width = 0), colour = "black") +
-  geom_hline(yintercept = c(238, 262, 286), linetype = 2, colour = "grey", alpha = 0.5) +
-  labs(x = "mtDNA haplotype", y = "Egg-to-adult development time (hrs)") +
-  theme_minimal() +
-  theme(legend.position = "none") +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
-
-
- #geom_point(data = survival_mtDNA_summary, aes(x = Focal_haplotype, y = Survived), size = 4, pch =21, colour='black', fill = c("Barcelona" = "#a50f15", "Brownsville" = "#fe9929", "Dahomey" = "#41b6c4", "Israel" = "#238443" , "Sweden" = "#4a1486")) +
-```
-
-**Figure S4:** There are no large effects of focal mitochondrial haplotype on Egg-to-adult development time. The coloured points show the development time for individual flies. The black points show the mean development time for males and females and its 95% confidence limits. Dashed lines illustrate the point at which lights were turned on each morning.
 
 ## Adult fitness measures
 
 
 ### Body size analysis
+* * *
 
-We use wing length as a proxy for adult body size. Errors are normally distributed, therefore we fit a linear mixed model.
+We use wing length as a proxy for adult body size.
+
+
+It is distributed normally, so we fit a linear mixed model.
 
 The model:
 
-**Wing_length ~ Focal_haplotype * Social_haplotype * Sex + (1|Strain) + (1|Block) + (1|Dyad_ID)**
+_Wing_length ~ Focal_haplotype * Social_haplotype * Sex + (1|Strain) + (1|Block) + (1|Dyad_ID)_
 
 
 ```{r size model}
 
-body_size_model<- lmer(Wing_length ~ Focal_haplotype * Social_haplotype * Sex + (1|Strain) + (1|Block) + (1|Dyad_ID), body_size, na.action = na.fail, REML = FALSE)
+body_size_model <- lmer(Wing_length ~ Focal_haplotype * Social_haplotype * Sex + (1|Strain) + (1|Block) + (1|Dyad_ID), body_size, na.action = na.fail, REML = FALSE)
 
 ```
 
@@ -523,7 +459,6 @@ size_table <- subset(body_size_dredge, delta < 6, recalc.weights = FALSE) %>% as
 
 
 names(size_table)[names(size_table) == "(Intercept)"] <- "Intercept"
-#names(size_table)[names(size_table) == "factor(Duplicate)"] <- "Duplicate"
 names(size_table)[names(size_table) == "Focal_haplotype"] <- "Focal haplotype"
 names(size_table)[names(size_table) == "Sex"] <- "Sex"
 names(size_table)[names(size_table) == "Social_haplotype"] <- "Social haplotype"
@@ -543,7 +478,10 @@ pander(size_table, split.cell = 40, split.table = Inf)
 
 #### Best fitting model
 
-**Table 3:** Model coefficients, standard error and 95% confidence limits are shown for the wing length top model. Bold rows indicate significant effects.
+There is a clear top model; model avergaing is not required.
+
+Model coefficients, standard error and 95% confidence limits listed in **Table 3** are shown are shown for the wing length top model. Bold rows indicate significant effects.
+
 ```{r size best model}
 
 # first get the RVI for each predictor
@@ -551,7 +489,7 @@ pander(size_table, split.cell = 40, split.table = Inf)
 RVI_size <- MuMIn::sw(body_size_dredge)
 
 
-# Model averaging
+# Fit the top model
 
 body_size_model_final <- lmer(Wing_length ~ Sex + (1|Strain) + (1|Block) + (1|Dyad_ID), body_size, na.action = na.fail, REML = FALSE)
 
@@ -575,45 +513,8 @@ pander(Size_model_avg, split.cell = 40, split.table = Inf, emphasize.strong.rows
 ```
 
 
-**Table S4:** Wing length (mm) for males and females pooled across the experimental _mt_-strains. We also measured the wings of a subset of the _bw_ males used in the male adult fitness assay. The size discrepancy between the _bw_ flies raised in vials at a moderate density (100 larvae per vial) and the _mt_-strains raised in highly competitive, resource poor, environments is evident.   
-
-```{r size plot and table}
-body_size_plot_data <- body_size %>% 
-  mutate(Sex = replace(as.character(Sex), Sex == "F", "Female"),
-         Sex = replace(as.character(Sex), Sex == "M", "Male"))
-
-body_size_summary <- body_size_plot_data %>% 
-  dplyr::group_by(Sex) %>%
-  dplyr::summarise(Mean_wing_length = mean(Wing_length), Lower = (Mean_wing_length - SE(Wing_length)* 1.96), Upper = (Mean_wing_length + SE(Wing_length)*1.96), n = n()) %>% rename(Wing_length = Mean_wing_length)
-
-bw_wing_summary <- bw_male_wing_data %>%
-  dplyr::summarise(Wing_length = mean(Length), Lower = (Wing_length - SE(Length)* 1.96), Upper = (Wing_length + SE(Length)*1.96), n = n())
-
-bw_wing_summary$Sex <- "bw_male"
-bw_wing_summary <- bw_wing_summary[, c(5, 1, 2, 3, 4)]
-
-
-rbind(body_size_summary, bw_wing_summary) %>% pander(split.cell = 30, split.table = Inf, col.names = c("Sex", "Mean wing length (mm)", "Lower 95% CI", "Upper 95% CI", "n"))
-
-
-size_plot <- body_size_plot_data %>%
-  ggplot(aes(x = Sex, y = Wing_length, fill = Sex, colour = Sex)) +
-  geom_quasirandom(data = body_size_plot_data, width = 0.3, size = 2, alpha =  0.5) +
-  scale_colour_manual(values = c("Female" = "#fe9929", "Male" = "#41b6c4")) +
-  geom_point(data = body_size_summary, aes(x = Sex, y = Wing_length), size = 3, colour='black') +
-  geom_errorbar(data = body_size_summary, aes(x = Sex, ymax = Upper, ymin = Lower, width = 0), colour = "black") +
-  labs(x = "Sex", y = "Wing length (mm)") +
-  theme_minimal() +
-  theme(legend.position = "none") +
-  theme(panel.grid.major.x = element_blank())
-
-#**Figure 5:** Sex affects wing length. The coloured points show the wing length for individual _mt_-strain flies. The black points show the mean wing length for males and females and its 95% confidence limits.
-
-```
-
-
-
 ### Female reproductive output
+* * *
 
 To effectively accommodate zero-inflation, we modelled female offspring production using the `glmmTMB` package [@RN602]. This package allows us to fit hurdle models and zero-inflated models.
 
@@ -623,11 +524,10 @@ We analysed the number of offspring produced by females using a hurdle model wit
 
 The model:
 
-**Maternal_total_offspring ~ Focal_haplotype * Social_haplotype + (1|Strain) + (1|Block)**
+_Maternal_total_offspring ~ Focal_haplotype * Social_haplotype + (1|Strain) + (1|Block)_
 
 ```{r female model}
-
-female_hurdle_model <- glmmTMB(Maternal_total_offspring ~ Focal_haplotype * Social_haplotype + (1|Strain) + (1|Block), data = female_reproductive_output, family = list(family="truncated_nbinom1",link="log"), ziformula = ~., na.action = na.fail, REML = FALSE)
+female_hurdle_model <- glmmTMB(Maternal_total_offspring ~ Social_haplotype * Focal_haplotype + (1|Strain) + (1|Block), data = female_reproductive_output, family = list(family="truncated_nbinom1",link="log"), ziformula = ~., na.action = na.fail, REML = FALSE)
 
 ```
 
@@ -637,22 +537,21 @@ female_hurdle_model <- glmmTMB(Maternal_total_offspring ~ Focal_haplotype * Soci
 ```{r female dredge table}
 # Compare all possible combinations of models (from the global model)
 
-if(file.exists("female_dredge_strain.rds")){ # If already done, just load the results
-  female_dredge_strain <- readRDS("female_dredge_strain.rds")
-} else {female_dredge_strain <- dredge(female_hurdle_model)                  # If not already done, run all the models and save the results
-lapply(c("female_dredge_strain"), save_it)
+if(file.exists("female_dredge.rds")){ # If already done, just load the results
+  female_dredge <- readRDS("female_dredge.rds")
+} else {female_dredge <- dredge(female_hurdle_model)                  # If not already done, run all the models and save the results
+lapply(c("female_dredge"), save_it)
 }
 
-female_table <- subset(female_dredge_strain, delta < 6, recalc.weights = FALSE) %>% as.data.frame()
+
+female_table <- subset(female_dredge, delta < 6, recalc.weights = FALSE) %>% as.data.frame()
 
 names(female_table)[names(female_table) == "cond((Int))"] <- "Conditional intercept"
 names(female_table)[names(female_table) == "zi((Int))"] <- "Zero-inflated intercept"
 names(female_table)[names(female_table) == "disp((Int))"] <- "Dispersion factor intercept"
-#names(female_table)[names(female_table) == "cond(factor(Duplicate))"] <- "Conditional (Duplicate)"
 names(female_table)[names(female_table) == "cond(Focal_haplotype)"] <- "Conditional (Focal haplotype)"
 names(female_table)[names(female_table) == "cond(Social_haplotype)"] <- "Conditional (Social haplotype)"
 names(female_table)[names(female_table) == "cond(Focal_haplotype:Social_haplotype)"] <- "Conditional (Focal haplotype x Social haplotype)"
-#names(female_table)[names(female_table) == "zi(factor(Duplicate))"] <- "Zero-inflated (Duplicate)"
 names(female_table)[names(female_table) == "zi(Focal_haplotype)"] <- "Zero-inflated (Focal haplotype)"
 names(female_table)[names(female_table) == "zi(Social_haplotype)"] <- "Zero-inflated (Social haplotype)"
 names(female_table)[names(female_table) == "zi(Focal_haplotype:Social_haplotype)"] <- "Zero-inflated (Focal haplotype x Social haplotype)"
@@ -668,19 +567,23 @@ pander(female_table, split.cell = 40, split.table = Inf)
 
 #### Model averaging
 
-**Table 4:** Conditional (after hurdle) and zi (zero-hurdle requirement) model coefficients, standard error and 95% confidence limits are shown for the female offspring production averaged model. Bold rows indicate significant effects. 
+Zi (zero-hurdle requirement) and conditional (after hurdle)  model coefficients, standard error and 95% confidence limits listed in **Table 4** are shown for the female offspring production averaged model. Bold rows indicate significant effects. 
 
 ```{r female model averaging}
 
-# first get the RVI for each predictor
+# We need to create the top_survival_models object and average from that so that we can get mean estimates successfully using predict(), fitted() or eemeans()
 
-RVI_female <- MuMIn::sw(female_dredge_strain)
+top_female_models <- get.models(female_dredge, subset = delta < 6)
 
-# summary(model.avg(female_dredge, subset = delta < 6))
+female_avgm <- model.avg(top_female_models)
 
-Female_CIs <- confint(model.avg(female_dredge_strain, subset = delta < 6)) %>% as.data.frame()
+# extract useful info
 
-Female_estimate <- coefTable(model.avg(female_dredge_strain, subset = delta < 6)) %>% as.data.frame()
+RVI_female <- MuMIn::sw(female_dredge)
+
+Female_CIs <- confint(model.avg(female_dredge, subset = delta < 6)) %>% as.data.frame()
+
+Female_estimate <- coefTable(model.avg(female_dredge, subset = delta < 6)) %>% as.data.frame()
 
 Female_model_avg <- data.frame(Female_estimate, Female_CIs) %>% select(Estimate, Std..Error,  X2.5.., X97.5..)
 
@@ -697,107 +600,144 @@ Female_model_avg %>%
 
 ```
 
+**WHAT IS GOING ON WITH PREDICT?**
+
 ```{r female figure, fig.width=11, fig.height=8.5}
-female_zi_plot_data <- female_reproductive_output %>%
-  mutate(Binary_maternal_offspring = ifelse(Maternal_total_offspring > 0, "1", "0"))
 
-# create the social zi plot
+# Plotting with model predictions
 
-female_social_zi_summary <- female_zi_plot_data %>% 
-  dplyr::group_by(Social_haplotype) %>%
-  dplyr::summarise(number_producing_offspring = sum(Binary_maternal_offspring == 1), number_zero_offspring = sum(Binary_maternal_offspring == 0)) %>%
+# Make a new dataframe, for which we will derive predictions. It's the same as the old data, except that we set Focal haplotype, block and duplicate to the same value for all observations. Predictions change depending on random effect levels - this isn't what I want.
+ 
+new_data <- female_reproductive_output %>%
+  ungroup() %>%
+  select(Focal_haplotype, Strain, Block) %>%
+  mutate(Social_haplotype = "Barcelona", Strain = "Barcelona 1", Block = "1") %>% 
+  distinct()
+
+# First lets get predictions for the average number of offspring produced by females that produced at least one progeny, split by focal haplotype.
+
+pred <- predict(female_avgm, se.fit = TRUE, type = "conditional", new_data) %>%
+  unlist() %>% 
   as.data.frame()
 
-female_social_zi_CIs <- get_CIs_for_binomial_trials(female_social_zi_summary$number_producing_offspring, female_social_zi_summary$number_zero_offspring) %>% rename(Binary_maternal_offspring = Proportion)
+pred1 <- pred %>% 
+  slice(1:5) %>% 
+  rename(mean_estimate = ".")
 
-female_social_zi_summary <- cbind(female_social_zi_summary, female_social_zi_CIs)
+pred2 <- pred %>% 
+  slice(6:10) %>% 
+  rename(SE = ".")
+  
+pred <- cbind(new_data, pred1, pred2) %>%
+  mutate(Upper = mean_estimate + SE,
+         Lower = mean_estimate - SE) %>%
+  rename(Maternal_total_offspring = mean_estimate)
 
-female_social_zi_plot <- female_zi_plot_data %>%
-  ggplot(aes(x = Social_haplotype, y = Binary_maternal_offspring, fill = Social_haplotype, colour = Social_haplotype)) +
-  geom_errorbar(data = female_social_zi_summary, aes(x = Social_haplotype, ymax = upperCI, ymin = lowerCI, width = 0), colour = "grey26") +
-  geom_point(data = female_social_zi_summary, aes(x = Social_haplotype, y = Binary_maternal_offspring), size = 4, pch =21, colour='grey26', fill = c("Barcelona" = "#a50f15", "Brownsville" = "#fe9929", "Dahomey" = "#41b6c4", "Israel" = "#238443" , "Sweden" = "#4a1486")) +
-  labs(x = "Social male mtDNA haplotype", y = "Proportion of females producing offspring") +
-  theme_minimal() +
-  theme(legend.position = "none") +
-  theme(panel.grid.major.x = element_blank())
-
-
-#geom_point(data = survival_mtDNA_summary, aes(x = Focal_haplotype, y = Survived), size = 4, pch =21, colour='black', fill = c("Barcelona" = "#a50f15", "Brownsville" = "#fe9929", "Dahomey" = "#41b6c4", "Israel" = "#238443" , "Sweden" = "#4a1486")) +
-
-# create the focal zi plot
-
-female_focal_zi_summary <- female_zi_plot_data %>% 
-  dplyr::group_by(Focal_haplotype) %>%
-  dplyr::summarise(number_producing_offspring = sum(Binary_maternal_offspring == 1), number_zero_offspring = sum(Binary_maternal_offspring == 0)) %>%
-  as.data.frame()
-
-female_focal_zi_CIs <- get_CIs_for_binomial_trials(female_focal_zi_summary$number_producing_offspring, female_focal_zi_summary$number_zero_offspring) %>% rename(Binary_maternal_offspring = Proportion)
-
-female_focal_zi_summary <- cbind(female_focal_zi_summary, female_focal_zi_CIs)
-
-
-female_focal_zi_plot <- female_zi_plot_data %>%
-  ggplot(aes(x = Focal_haplotype, y = Binary_maternal_offspring, fill = Focal_haplotype, colour = Focal_haplotype)) +
-  geom_errorbar(data = female_focal_zi_summary, aes(x = Focal_haplotype, ymax = upperCI, ymin = lowerCI, width = 0), colour = "black") +
-  geom_point(data = female_focal_zi_summary, aes(x = Focal_haplotype, y = Binary_maternal_offspring), size = 4, pch =21, colour='grey26', fill = c("Barcelona" = "#a50f15", "Brownsville" = "#fe9929", "Dahomey" = "#41b6c4", "Israel" = "#238443" , "Sweden" = "#4a1486")) +
-  labs(x = "Female mtDNA haplotype", y = "Proportion of females producing offspring") +
-  theme_minimal() +
-  theme(legend.position = "none") +
-  theme(panel.grid.major.x = element_blank())
-
-# create the focal conditional plot
-
-female_cond_plot_data <- female_reproductive_output %>%
-  filter(Maternal_total_offspring != 0)
-
-female_social_cond_summary <- female_cond_plot_data %>% 
-  dplyr::group_by(Social_haplotype) %>%
-  dplyr::summarise(Mean_offspring = mean(Maternal_total_offspring), Lower = (Mean_offspring - SE(Maternal_total_offspring)* 1.96), Upper = (Mean_offspring + SE(Maternal_total_offspring)*1.96), n = n()) %>%
-  rename(Maternal_total_offspring = Mean_offspring)
-
-
-female_social_cond_plot <- female_cond_plot_data %>%
-  ggplot(aes(x = Social_haplotype, y = Maternal_total_offspring, fill = Social_haplotype, colour = Social_haplotype)) +
-  geom_quasirandom(data = female_cond_plot_data, width = 0.3, size = 2, alpha =  0.5) +
-  scale_colour_manual(values = c("Barcelona" = "#a50f15", "Brownsville" = "#fe9929", "Dahomey" = "#41b6c4", "Israel" = "#238443" , "Sweden" = "#4a1486")) +
-  geom_point(data = female_social_cond_summary, aes(x = Social_haplotype, y = Maternal_total_offspring), size = 3, colour='black') +
-  geom_errorbar(data = female_social_cond_summary, aes(x = Social_haplotype, ymax = Upper, ymin = Lower, width = 0), colour = "black") +
-  labs(x = "Social male mtDNA haplotype", y = "Number of offspring produced") +
-  theme_minimal() +
-  theme(legend.position = "none") +
-  theme(panel.grid.major.x = element_blank())
-
-# create the focal conditional plot
+# Load the data for each individual female that produced offspring so that this can be plotted
 
 female_cond_plot_data <- female_reproductive_output %>% 
-  filter(Maternal_total_offspring != 0)
+  filter(Maternal_total_offspring != 0) %>%
+  ungroup() %>% 
+  select(Individual, Focal_haplotype, Maternal_total_offspring)
 
-female_cond_summary <- female_cond_plot_data %>% 
-  dplyr::group_by(Focal_haplotype) %>%
-  dplyr::summarise(Mean_offspring = mean(Maternal_total_offspring), Lower = (Mean_offspring - SE(Maternal_total_offspring)* 1.96), Upper = (Mean_offspring + SE(Maternal_total_offspring)*1.96), n = n()) %>% rename(Maternal_total_offspring = Mean_offspring)
-
+# Now lets plot these predictions
 
 female_focal_cond_plot <- female_cond_plot_data %>%
   ggplot(aes(x = Focal_haplotype, y = Maternal_total_offspring, fill = Focal_haplotype, colour = Focal_haplotype)) +
-  geom_quasirandom(data = female_cond_plot_data, width = 0.3, size = 2, alpha =  0.5) +
-  scale_colour_manual(values = c("Barcelona" = "#a50f15", "Brownsville" = "#fe9929", "Dahomey" = "#41b6c4", "Israel" = "#238443" , "Sweden" = "#4a1486")) +
-  geom_point(data = female_cond_summary, aes(x = Focal_haplotype, y = Maternal_total_offspring), size = 3, colour='black') +
-  geom_errorbar(data = female_cond_summary, aes(x = Focal_haplotype, ymax = Upper, ymin = Lower, width = 0), colour = "black") +
+  geom_quasirandom(data = female_cond_plot_data, width = 0.3, size = 2, alpha =  0.5, pch = 21, colour = 'grey26') +
+scale_fill_manual(values = c("Barcelona" = "#fcde9c", "Brownsville" = "#f58670", "Dahomey" = "#e34f6f", "Israel" = "#d72d7c" , "Sweden" = "#7c1d6f")) +
+geom_point(data = pred, aes(x = Focal_haplotype, y = Maternal_total_offspring), size = 3, colour='black') +
+  geom_errorbar(data = pred, aes(x = Focal_haplotype, ymax = Upper, ymin = Lower, width = 0), colour = "black") +
   labs(x = "Female mtDNA haplotype", y = "Number of offspring produced") +
   theme_minimal() +
   theme(legend.position = "none") +
   theme(panel.grid.major.x = element_blank())
 
-ggarrange(female_focal_zi_plot, female_focal_cond_plot, female_social_zi_plot, female_social_cond_plot, labels = c("a", "b", "c", "d"))
+# Now lets get the Zi predictions for focal haplotype
+
+pred_ZI <- predict(female_avgm, se.fit = TRUE, type = "zprob", new_data) %>%
+  unlist() %>% 
+  as.data.frame()
+
+pred_ZI_1 <- pred_ZI %>% 
+  slice(1:5) %>% 
+  rename(mean_estimate = ".")
+
+pred_ZI_2 <- pred_ZI %>% 
+  slice(6:10) %>% 
+  rename(SE = ".")
+
+pred_focal_ZI <- cbind(new_data, pred_ZI_1, pred_ZI_2) %>%
+  transmute(Focal_haplotype, Strain, Block, Social_haplotype, mean_estimate  = 1 - mean_estimate, SE) %>% 
+  mutate(Upper = mean_estimate + SE,
+         Lower = mean_estimate - SE)
+  
+#rename(Maternal_total_offspring = mean_estimate)
+
+
+# Plot
+  
+female_focal_zi_plot <- pred_focal_ZI %>%
+  ggplot(aes(x = Focal_haplotype, y = mean_estimate, fill = Focal_haplotype, colour = Focal_haplotype)) +
+  geom_errorbar(aes(x = Focal_haplotype, ymax = Upper, ymin = Lower, width = 0), colour = "black") +
+  geom_point(aes(x = Focal_haplotype, y = mean_estimate), size = 4, pch =21, colour='grey26', fill = c("Barcelona" = "#fcde9c", "Brownsville" = "#f58670", "Dahomey" = "#e34f6f", "Israel" = "#d72d7c" , "Sweden" = "#7c1d6f")) +
+  labs(x = "Female mtDNA haplotype", y = "Proportion of females producing offspring") +
+  ylim(0.4, 1) +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  theme(panel.grid.major.x = element_blank())
+  
+
+# Now create the newdata for social haplotype predictions
+
+new_data_social <- female_reproductive_output %>%
+  ungroup() %>%
+  select(Social_haplotype, Strain, Block) %>%
+  mutate(Focal_haplotype = "Barcelona", Strain = "Barcelona 1", Block = "1") %>% 
+  distinct()
+
+# Get zi social haplotype predictions
+
+pred_social_ZI <- predict(female_avgm, se.fit = TRUE, type = "zprob", new_data_social) %>%
+  unlist() %>% 
+  as.data.frame()
+
+pred_ZI_social_1 <- pred_social_ZI %>% 
+  slice(1:5) %>% 
+  rename(mean_estimate = ".")
+
+pred_ZI_social_2 <- pred_social_ZI %>% 
+  slice(6:10) %>% 
+  rename(SE = ".")
+
+pred_focal_ZI_social <- cbind(new_data_social, pred_ZI_social_1, pred_ZI_social_2) %>% 
+  transmute(Social_haplotype, Strain, Block, Focal_haplotype, mean_estimate  = 1 - mean_estimate, SE) %>% 
+  mutate(Upper = mean_estimate + SE,
+         Lower = mean_estimate - SE)
+  
+  # Plot 
+  
+female_social_zi_plot <- pred_focal_ZI_social %>%
+  ggplot(aes(x = Social_haplotype, y = mean_estimate, fill = Social_haplotype, colour = Social_haplotype)) +
+  geom_errorbar(aes(x = Social_haplotype, ymax = Upper, ymin = Lower, width = 0), colour = "black") +
+  geom_point(aes(x = Social_haplotype, y = mean_estimate), size = 4, pch =21, colour='grey26', fill = c("Barcelona" = "#fcde9c", "Brownsville" = "#f58670", "Dahomey" = "#e34f6f", "Israel" = "#d72d7c" , "Sweden" = "#7c1d6f")) +
+  labs(x = "Male mtDNA haplotype", y = "Proportion of females producing offspring") +
+  ylim(0.4, 1) +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  theme(panel.grid.major.x = element_blank())
+  
+ggarrange(female_focal_zi_plot, female_social_zi_plot, female_focal_cond_plot, labels = c("a", "b", "c"))
 
 ```
 
-**Figure 1:** mtDNA affects the direct and inclusive components of fitness. Panels **a** and **b** show the direct effect of mtDNA on female fitness, for the hurdle (did the female produce any offspring?) and conditional (how many offspring did the female produce?) components of the model respectively. Panels **c** and **d** show the social effect of mtDNA on female fitness. **a** and **c** Points show the mean for each focal/social haplotype and associated confidence intervals. **b** and **d** Black points show the mean for each haplotype, while coloured points represent each individual data point.
+**Figure 1:** mtDNA directly and indirectly affects female fitness. Panels **a** and **b** show the mean proportion of females that produced offspring (the zero-inflated or hurdle component of the model) across **a** female focal haplotypes and **b** social male haplotypes. Error bars depict standard errors. Panel **c** shows the direct effect of mtDNA on the number of offspring produced by a female. Black points show the mean with standard error for each haplotype, while coloured points represent each individual data point.
 
 
 ### Male adult fitness
+* * *
 
-We follow the classic approach to sperm competition analysis and consider male fitness as the proportion of offspring sired by an experimental mitochondrial strain male while competing against a standard _bw_ male.
+We measure male fitness as the proportion of offspring sired by an experimental mitochondrial strain male while competing against a standard _bw_ male.
 
 However, our measure of male fitness involves both pre- and post-copulatory competitive ability; that is we assess in one measure the combination of 1) the ability of a male to inseminate a female in the presence of another male and 2) the competitive ability of his sperm within females that have been inseminated by another male. Interestingly, the data contains many 0 or 1 values - corresponding to a monopoly of female fertilisation by one of the males.
 
@@ -805,8 +745,7 @@ The Brownsville haplotype renders males sterile alongside the _w^1118^_ nuclear 
 
 We fit a success / failure binomial model:
 
-**(Focal_male_offspring, bw_offspring) ~ Focal_haplotype * Social_haplotype + (1|Strain) + (1|Block) + (1|Individual)**
-
+_(Focal_male_offspring, bw_offspring) ~ Focal_haplotype * Social_haplotype + (1|Strain) + (1|Block) + (1|Individual)_
 
 ```{r male model}
 Male_fitness_without_Brownsville <- Male_fitness %>%
@@ -831,7 +770,6 @@ Male_binary_table <- subset(male_binary_dredge, delta < 6) %>% as.data.frame()
 
 
 names(Male_binary_table)[names(Male_binary_table) == "(Intercept)"] <- "Intercept"
-#names(Male_binary_table)[names(Male_binary_table) == "factor(Duplicate)"] <- "Duplicate"
 names(Male_binary_table)[names(Male_binary_table) == "Focal_haplotype"] <- "Focal haplotype"
 names(Male_binary_table)[names(Male_binary_table) == "Social_haplotype"] <- "Social haplotype"
 names(Male_binary_table)[names(Male_binary_table) == "Focal_haplotype:Social_haplotype"] <- "Focal haplotype x Social haplotype"
@@ -848,11 +786,18 @@ pander(Male_binary_table, split.cell = 40, split.table = Inf)
 
 #### Model averaging
 
-**Table 5:** Model coefficients, standard error and 95% confidence limits are shown for the male adult fitness averaged model. Bold rows indicate significant effects. 
+Model coefficients, standard error and 95% confidence limits listed in **Table 5** are shown for the male adult fitness averaged model. Bold rows indicate significant effects. 
 
 ```{r male model averaging}
 
-# first get the RVI for each predictor
+# Model average
+
+top_male_models <- get.models(male_binary_dredge, subset = delta < 6)
+
+male_avgm <- model.avg(top_male_models)
+
+
+# extract useful information
 
 RVI_male <- MuMIn::sw(male_binary_dredge)
 
@@ -879,44 +824,90 @@ pander(Male_binary_model_avg, split.cell = 40, split.table = Inf, emphasize.stro
 
 ```{r male figure, fig.width= 8.5, fig.height= 6}
 
-Male_fitness_summary_socialmt <- Male_fitness %>% 
-  group_by(Social_haplotype) %>%
-  dplyr::summarise(Mean_proportion_focal = sum(Proportion_focal) / length(Proportion_focal), Lower = (Mean_proportion_focal - SE(Proportion_focal)* 1.96), Upper = (Mean_proportion_focal + SE(Proportion_focal)*1.96), n = n()) %>% rename(Proportion_focal = Mean_proportion_focal)
+# Ok so this isn't very useful, the probabilities returned very a heap depending on the level set for the Individual random effect, and I can't get SE for some reason.
 
-Male_fitness_summary_focalmt <- Male_fitness %>% 
-  group_by(Focal_haplotype) %>%
-  dplyr::summarise(Mean_proportion_focal = sum(Proportion_focal) / length(Proportion_focal), Lower = (Mean_proportion_focal - SE(Proportion_focal)* 1.96), Upper = (Mean_proportion_focal + SE(Proportion_focal)*1.96), n = n()) %>% rename(Proportion_focal = Mean_proportion_focal)
+# Focal new data
 
+new_data_male <- Male_fitness %>%
+  ungroup() %>%
+  select(Focal_haplotype, Strain, Block, Individual) %>%
+  mutate(Social_haplotype = "Barcelona", Strain = "Barcelona 1", Block = "1", Individual = "32") %>% 
+  distinct() %>% 
+  slice(-2)
+
+
+pred_male_focal <- predict(male_avgm, newdata = new_data_male, type = "response", se.fit = TRUE) %>%
+  unlist() %>% 
+  as.data.frame()
+
+pred_male_focal_1 <- pred_male_focal %>% 
+  slice(1:5) %>% 
+  rename(mean_estimate = ".")
+
+pred_male_focal_2 <- pred_male_focal %>% 
+  slice(6:10) %>% 
+  rename(SE = ".")
+  
+pred_focal_male <- cbind(new_data_male, pred_male_focal_1)
+
+# Plot
 
 Male_focal_plot <- Male_fitness %>%
   ggplot(aes(x = Focal_haplotype, y = Proportion_focal, fill = Focal_haplotype, colour = Focal_haplotype)) +
-  geom_quasirandom(data = Male_fitness, width = 0.3, alpha =  0.3, aes(size = Offspring_counted)) +
+  geom_quasirandom(data = Male_fitness, width = 0.3, alpha =  0.3, pch = 21, colour = 'grey21', aes(size = Offspring_counted)) +
   scale_size_continuous(range = c(0.5, 6), labels = NULL, breaks = c(20, 40, 60, 80, 100, 120)) +
-  scale_colour_manual(values = c("Barcelona" = "#a50f15", "Brownsville" = "#fe9929", "Dahomey" = "#41b6c4", "Israel" = "#238443" , "Sweden" = "#4a1486")) +
-  geom_point(data = Male_fitness_summary_focalmt, aes(x = Focal_haplotype, y = Proportion_focal), size = 3, colour='black') +
-  geom_errorbar(data = Male_fitness_summary_focalmt, aes(x = Focal_haplotype, ymax = Upper, ymin = Lower, width = 0), colour = "black") +
+  #scale_colour_manual(values = c("Barcelona" = "#a50f15", "Brownsville" = "#fe9929", "Dahomey" = "#41b6c4", "Israel" = "#238443" , "Sweden" = "#4a1486")) +
+  scale_fill_manual(values = c("Barcelona" = "#fcde9c", "Brownsville" = "#f58670", "Dahomey" = "#e34f6f", "Israel" = "#d72d7c" , "Sweden" = "#7c1d6f")) +
+  geom_point(data = pred_focal_male, aes(x = Focal_haplotype, y = mean_estimate), size = 3, colour='black') +
+  #geom_errorbar(data = pred_focal_male, aes(x = Focal_haplotype, ymax = Upper, ymin = Lower, width = 0), colour = "black") +
   labs(x = "Male mtDNA haplotype", y = "Proportion of offspring sired by focal male") +
   theme_minimal() +
   theme(legend.position = "none") +
   theme(panel.grid.major.x = element_blank())
 
 
+# Social new data
+
+new_data_social_male <- Male_fitness %>%
+  ungroup() %>%
+  select(Social_haplotype, Strain, Block, Individual) %>%
+  mutate(Focal_haplotype = "Barcelona", Strain = "Barcelona 1", Block = "1", Individual = "32") %>% 
+  distinct()
+
+
+pred_male_social <- predict(male_avgm, newdata = new_data_social_male, type = "response", se.fit = TRUE) %>%
+  unlist() %>% 
+  as.data.frame()
+
+pred_male_social_1 <- pred_male_social %>% 
+  slice(1:5) %>% 
+  rename(mean_estimate = ".")
+
+pred_male_social_2 <- pred_male_social %>% 
+  slice(6:10) %>% 
+  rename(SE = ".")
+  
+pred_male_social <- cbind(new_data_social_male, pred_male_social_1)
+
+# Plot
+
 Male_social_plot <- Male_fitness %>%
   ggplot(aes(x = Social_haplotype, y = Proportion_focal, fill = Social_haplotype, colour = Social_haplotype)) +
-  geom_quasirandom(data = Male_fitness, width = 0.3, alpha =  0.3, aes(size = Offspring_counted)) +
+  geom_quasirandom(data = Male_fitness, width = 0.3, alpha =  0.3, pch = 21, colour = 'grey21', aes(size = Offspring_counted)) +
   scale_size_continuous(range = c(0.5, 6), labels = NULL, breaks = c(20, 40, 60, 80, 100, 120)) +
-  scale_colour_manual(values = c("Barcelona" = "#a50f15", "Brownsville" = "#fe9929", "Dahomey" = "#41b6c4", "Israel" = "#238443" , "Sweden" = "#4a1486")) +
-  geom_point(data = Male_fitness_summary_socialmt, aes(x = Social_haplotype, y = Proportion_focal), size = 3, colour='black') +
-  geom_errorbar(data = Male_fitness_summary_socialmt, aes(x = Social_haplotype, ymax = Upper, ymin = Lower, width = 0), colour = "black") +
-  labs(x = "Social female mtDNA haplotype", y = "") +
+ scale_fill_manual(values = c("Barcelona" = "#fcde9c", "Brownsville" = "#f58670", "Dahomey" = "#e34f6f", "Israel" = "#d72d7c" , "Sweden" = "#7c1d6f")) +
+  geom_point(data = pred_male_social, aes(x = Social_haplotype, y = mean_estimate), size = 3, colour='black') +
+  #geom_errorbar(data = pred_focal_male, aes(x = Focal_haplotype, ymax = Upper, ymin = Lower, width = 0), colour = "black") +
+  labs(x = "Female mtDNA haplotype", y = "Proportion of offspring sired by focal male") +
   theme_minimal() +
   theme(legend.position = "none") +
   theme(panel.grid.major.x = element_blank())
+
 ggarrange(Male_focal_plot, Male_social_plot, labels = c("a", "b"))
 
 ```
 
-**Figure 2**: The proportion of offspring produced by _mt_-strain males competing with standard _bw_ males. **a** shows the direct effect of mtDNA on male fitness. **b** shows the indirect genetic effect of mtDNA on male fitness. Coloured points represent individual males, with larger points indicating a higher number of offspring produced in the vial (sired by either male). Black points show the mean proportion of offspring sired by the mt-strain male, with associated 95% confidence intervals.
+**Figure 2**: The proportion of offspring produced by _mt_-strain males competing with standard _bw_ males. **a** shows the direct effect of mtDNA on male fitness. **b** shows the indirect genetic effect of mtDNA on male fitness. Coloured points represent individual males, with larger points indicating a higher number of offspring produced in the vial (sired by either male). Black points show the mean proportion of offspring sired by the mt-strain male, with associated standard errors. **a** does not include a point estimate for the porportion of offspring sired by males carrying the Brownsville haplotype, as Brownsville was not included in the model. 
 
 
 # Raw data and reproducibility
@@ -926,7 +917,7 @@ ggarrange(Male_focal_plot, Male_social_plot, labels = c("a", "b"))
 For completeness, transparency and for purposes of data archiving, we include the raw data in this report.
 
 
-**Table S6**: the raw data-set used in the present study.
+**Table S6**: the raw data-set used in the present study, with NA values resulting from data collection mistakes removed (i.e. two females placed in competitive environment, no value recorded for whether the fly survived, flies that escaped during the experiment etc.).
 ```{r raw data}
 kable(fitness_data %>% filter(!is.na(Survived)), "html") %>%
   kable_styling() %>%
