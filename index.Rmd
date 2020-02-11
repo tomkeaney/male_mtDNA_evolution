@@ -60,44 +60,10 @@ all_data <- read.csv("mtDNA_larval_competition_data.csv") %>%
   arrange(Individual) %>%
   group(n = 2, method = "greedy") %>% rename(Dyad_ID = .groups)
 
-# helper for saving large model objects and naming the file object.rds
+# helper function for saving large model objects and naming the file object.rds
 
 save_it <- function(object){
   saveRDS(get(object), file = paste(object, ".rds", sep = ""))}
-
-
-
-# **THIS MIGHT BE DELETED**
-
-# Define a standard dodge for the error bar plots
-
-pd <- position_dodge(0.75) # move them 0.3 to the left and right
-
-
-# **THIS IS LIKELY TO BE CUT IF WE CAN DERIVE MARGINAL MEANS FROM MODELS**
-
-# Create a function for standard error - generally useful and needed for later
-
-SE <- function(x) sd(x)/sqrt(length(x))
-
-# function for finding CIs for binomial data
-
-get_CIs_for_binomial_trials <- function(success, failure){
-  
-  output <- as.data.frame(matrix(NA, nrow = length(success), ncol = 5))
-  
-  for(i in 1:length(success)){
-    n <- success[i] + failure[i]
-    x <- binom.test(success[i], n)
-    output[i,] <- c(x$estimate,
-                    as.numeric(x$conf.int),
-                    sqrt(x$estimate * (1-x$estimate)/n), # binomial SE = sqrt(p(1-p)/n)
-                    n)
-  }
-  names(output) <- c("Proportion", "lowerCI", "upperCI", "SE", "n")
-  output
-}
-# e.g. get_CIs_for_binomial_trials(survived = c(10,100), died = c(50,30))
 
 ```
 
@@ -528,7 +494,6 @@ _Maternal_total_offspring ~ Focal_haplotype * Social_haplotype + (1|Strain) + (1
 
 ```{r female model}
 female_hurdle_model <- glmmTMB(Maternal_total_offspring ~ Social_haplotype * Focal_haplotype + (1|Strain) + (1|Block), data = female_reproductive_output, family = list(family="truncated_nbinom1",link="log"), ziformula = ~., na.action = na.fail, REML = FALSE)
-
 ```
 
 #### Model evaluation
@@ -606,7 +571,7 @@ Female_model_avg %>%
 
 # Plotting with model predictions
 
-# Make a new dataframe, for which we will derive predictions. It's the same as the old data, except that we set Focal haplotype, block and duplicate to the same value for all observations. Predictions change depending on random effect levels - this isn't what I want.
+# Make a new dataframe, for which we will derive predictions. It's the same as the old data, except that we set Focal haplotype, block and duplicate to the same value for all observations. The re.form = NA argument sets random effects to 0, meaning population means are calculated.
  
 new_data <- female_reproductive_output %>%
   ungroup() %>%
@@ -616,7 +581,7 @@ new_data <- female_reproductive_output %>%
 
 # First lets get predictions for the average number of offspring produced by females that produced at least one progeny, split by focal haplotype.
 
-pred <- predict(female_avgm, se.fit = TRUE, type = "conditional", new_data) %>%
+pred <- predict(female_avgm, se.fit = TRUE, type = "conditional", re.form = NA, new_data) %>%
   unlist() %>% 
   as.data.frame()
 
@@ -655,7 +620,7 @@ geom_point(data = pred, aes(x = Focal_haplotype, y = Maternal_total_offspring), 
 
 # Now lets get the Zi predictions for focal haplotype
 
-pred_ZI <- predict(female_avgm, se.fit = TRUE, type = "zprob", new_data) %>%
+pred_ZI <- predict(female_avgm, se.fit = TRUE, type = "zprob", re.form = NA, new_data) %>%
   unlist() %>% 
   as.data.frame()
 
@@ -698,7 +663,7 @@ new_data_social <- female_reproductive_output %>%
 
 # Get zi social haplotype predictions
 
-pred_social_ZI <- predict(female_avgm, se.fit = TRUE, type = "zprob", new_data_social) %>%
+pred_social_ZI <- predict(female_avgm, se.fit = TRUE, type = "zprob", re.form = NA, new_data_social) %>%
   unlist() %>% 
   as.data.frame()
 
@@ -751,10 +716,10 @@ _(Focal_male_offspring, bw_offspring) ~ Focal_haplotype * Social_haplotype + (1|
 Male_fitness_without_Brownsville <- Male_fitness %>%
   filter(Focal_haplotype != "Brownsville")
   
-
 response <- cbind(Male_fitness_without_Brownsville$Focal_male_offspring, Male_fitness_without_Brownsville$bw_male_offspring)
 
-Binary_male_model <- lme4::glmer(response ~ Focal_haplotype * Social_haplotype + (1|Strain) + (1|Block) + (1|Individual), data = Male_fitness_without_Brownsville, family = "binomial", control = glmerControl(optimizer = "Nelder_Mead", optCtrl=list(maxfun=100000)), na.action = na.fail)
+Male_model_glmmTMB <- glmmTMB(response ~ Focal_haplotype * Social_haplotype + (1|Strain) + (1|Block) + (1|Individual), data = Male_fitness_without_Brownsville, family = "binomial", ziformula = ~0, na.action = na.fail)
+
 
 
 ```
@@ -765,22 +730,27 @@ Binary_male_model <- lme4::glmer(response ~ Focal_haplotype * Social_haplotype +
 
 **Table S5**: Evaluation of the male adult fitness model. All possible models were evaluated from the global model that included an interaction between focal haplotype and social haplotype and the random factors Strain, Block and Individual. As there was no clear top model, the final model was calculated via model averaging.
 ```{r male dredge table}
-male_binary_dredge <- dredge(Binary_male_model)
 
-Male_binary_table <- subset(male_binary_dredge, delta < 6) %>% as.data.frame()
+if(file.exists("male_dredge.rds")){ # If already done, just load the results
+  male_dredge <- readRDS("male_dredge.rds")
+} else {male_dredge <- dredge(Male_model_glmmTMB) # If not already done, run all the models and save the results
+lapply(c("male_dredge"), save_it)
+}
+
+Male_table <- subset(male_dredge, delta < 6) %>% as.data.frame()
 
 
-names(Male_binary_table)[names(Male_binary_table) == "(Intercept)"] <- "Intercept"
-names(Male_binary_table)[names(Male_binary_table) == "Focal_haplotype"] <- "Focal haplotype"
-names(Male_binary_table)[names(Male_binary_table) == "Social_haplotype"] <- "Social haplotype"
-names(Male_binary_table)[names(Male_binary_table) == "Focal_haplotype:Social_haplotype"] <- "Focal haplotype x Social haplotype"
-names(Male_binary_table)[names(Male_binary_table) == "df"] <- "Degrees of freedom"
-names(Male_binary_table)[names(Male_binary_table) == "logLik"] <- "Log likelihood"
-names(Male_binary_table)[names(Male_binary_table) == "AICc"] <- "AICc"
-names(Male_binary_table)[names(Male_binary_table) == "delta"] <- "Delta"
-names(Male_binary_table)[names(Male_binary_table) == "weight"] <- "Weight"
+names(Male_table)[names(Male_table) == "(Intercept)"] <- "Intercept"
+names(Male_table)[names(Male_table) == "Focal_haplotype"] <- "Focal haplotype"
+names(Male_table)[names(Male_table) == "Social_haplotype"] <- "Social haplotype"
+names(Male_table)[names(Male_table) == "Focal_haplotype:Social_haplotype"] <- "Focal haplotype x Social haplotype"
+names(Male_table)[names(Male_table) == "df"] <- "Degrees of freedom"
+names(Male_table)[names(Male_table) == "logLik"] <- "Log likelihood"
+names(Male_table)[names(Male_table) == "AICc"] <- "AICc"
+names(Male_table)[names(Male_table) == "delta"] <- "Delta"
+names(Male_table)[names(Male_table) == "weight"] <- "Weight"
 
-pander(Male_binary_table, split.cell = 40, split.table = Inf)
+pander(Male_table, split.cell = 40, split.table = Inf)
 
 ```
 
@@ -793,32 +763,32 @@ Model coefficients, standard error and 95% confidence limits listed in **Table 5
 
 # Model average
 
-top_male_models <- get.models(male_binary_dredge, subset = delta < 6)
+top_male_models <- get.models(male_dredge, subset = delta < 6)
 
 male_avgm <- model.avg(top_male_models)
 
 
 # extract useful information
 
-RVI_male <- MuMIn::sw(male_binary_dredge)
+RVI_male <- MuMIn::sw(male_dredge)
 
 
 # summary(model.avg(male_binary_dredge, subset = delta < 6))
 
-Male_binary_CIs <- confint(model.avg(male_binary_dredge, subset = delta < 6)) %>% as.data.frame()
+Male_CIs <- confint(model.avg(male_dredge, subset = delta < 6)) %>% as.data.frame()
 
-Male_binary_estimate <- coefTable(model.avg(male_binary_dredge, subset = delta < 6)) %>% as.data.frame()
+Male_estimate <- coefTable(model.avg(male_dredge, subset = delta < 6)) %>% as.data.frame()
 
-Male_binary_model_avg <- data.frame(Male_binary_estimate, Male_binary_CIs) %>% select(Estimate, Std..Error,  X2.5.., X97.5..)
+Male_model_avg <- data.frame(Male_estimate, Male_CIs) %>% select(Estimate, Std..Error,  X2.5.., X97.5..)
 
-row.names(Male_binary_model_avg) <- c("Intercept", "Social haplotype: Brownsville", "Social haplotype: Dahomey", "Social haplotype: Israel", "Social haplotype: Sweden", "Focal haplotype: Dahomey", "Focal haplotype: Israel", "Focal haplotype: Sweden")
+row.names(Male_model_avg) <- c("Intercept", "Social haplotype: Brownsville", "Social haplotype: Dahomey", "Social haplotype: Israel", "Social haplotype: Sweden", "Focal haplotype: Dahomey", "Focal haplotype: Israel", "Focal haplotype: Sweden")
 
-names(Male_binary_model_avg)[names(Male_binary_model_avg) == "Estimate"] <- "Conditional average estimate"
-names(Male_binary_model_avg)[names(Male_binary_model_avg) == "Std..Error"] <- "Standard Error"
-names(Male_binary_model_avg)[names(Male_binary_model_avg) == "X2.5.."] <- "2.5% Interval"
-names(Male_binary_model_avg)[names(Male_binary_model_avg) == "X97.5.."] <- "97.5% Interval"
+names(Male_model_avg)[names(Male_model_avg) == "Estimate"] <- "Conditional average estimate"
+names(Male_model_avg)[names(Male_model_avg) == "Std..Error"] <- "Standard Error"
+names(Male_model_avg)[names(Male_model_avg) == "X2.5.."] <- "2.5% Interval"
+names(Male_model_avg)[names(Male_model_avg) == "X97.5.."] <- "97.5% Interval"
 
-pander(Male_binary_model_avg, split.cell = 40, split.table = Inf, emphasize.strong.rows = (2), round = 3)
+pander(Male_model_avg, split.cell = 40, split.table = Inf, emphasize.strong.rows = (2), round = 3)
 
 ```
 
@@ -832,24 +802,27 @@ pander(Male_binary_model_avg, split.cell = 40, split.table = Inf, emphasize.stro
 new_data_male <- Male_fitness %>%
   ungroup() %>%
   select(Focal_haplotype, Strain, Block, Individual) %>%
-  mutate(Social_haplotype = "Barcelona", Strain = "Barcelona 1", Block = "1", Individual = "32") %>% 
+  mutate(Social_haplotype = "Barcelona", Strain = "Barcelona 1", Block = "1", Individual = "4") %>% 
   distinct() %>% 
   slice(-2)
 
 
-pred_male_focal <- predict(male_avgm, newdata = new_data_male, type = "response", se.fit = TRUE) %>%
+pred_male_focal <- predict(male_avgm, newdata = new_data_male, type = "conditional", se.fit = TRUE, re.form = NA) %>%
   unlist() %>% 
   as.data.frame()
 
 pred_male_focal_1 <- pred_male_focal %>% 
-  slice(1:5) %>% 
+  slice(1:4) %>% 
   rename(mean_estimate = ".")
 
 pred_male_focal_2 <- pred_male_focal %>% 
-  slice(6:10) %>% 
+  slice(5:8) %>% 
   rename(SE = ".")
   
-pred_focal_male <- cbind(new_data_male, pred_male_focal_1)
+pred_focal_male <- cbind(new_data_male, pred_male_focal_1, pred_male_focal_2) %>% 
+  rename(Proportion_focal = mean_estimate) %>% 
+  mutate(Upper = Proportion_focal + SE,
+         Lower = Proportion_focal - SE)
 
 # Plot
 
@@ -859,8 +832,8 @@ Male_focal_plot <- Male_fitness %>%
   scale_size_continuous(range = c(0.5, 6), labels = NULL, breaks = c(20, 40, 60, 80, 100, 120)) +
   #scale_colour_manual(values = c("Barcelona" = "#a50f15", "Brownsville" = "#fe9929", "Dahomey" = "#41b6c4", "Israel" = "#238443" , "Sweden" = "#4a1486")) +
   scale_fill_manual(values = c("Barcelona" = "#fcde9c", "Brownsville" = "#f58670", "Dahomey" = "#e34f6f", "Israel" = "#d72d7c" , "Sweden" = "#7c1d6f")) +
-  geom_point(data = pred_focal_male, aes(x = Focal_haplotype, y = mean_estimate), size = 3, colour='black') +
-  #geom_errorbar(data = pred_focal_male, aes(x = Focal_haplotype, ymax = Upper, ymin = Lower, width = 0), colour = "black") +
+  geom_point(data = pred_focal_male, aes(x = Focal_haplotype, y = Proportion_focal), size = 3, colour='black') +
+  geom_errorbar(data = pred_focal_male, aes(x = Focal_haplotype, ymax = Upper, ymin = Lower, width = 0), colour = "black") +
   labs(x = "Male mtDNA haplotype", y = "Proportion of offspring sired by focal male") +
   theme_minimal() +
   theme(legend.position = "none") +
@@ -872,11 +845,11 @@ Male_focal_plot <- Male_fitness %>%
 new_data_social_male <- Male_fitness %>%
   ungroup() %>%
   select(Social_haplotype, Strain, Block, Individual) %>%
-  mutate(Focal_haplotype = "Barcelona", Strain = "Barcelona 1", Block = "1", Individual = "32") %>% 
+  mutate(Focal_haplotype = "Barcelona", Strain = "Barcelona 1", Block = "1", Individual = "4") %>% 
   distinct()
 
 
-pred_male_social <- predict(male_avgm, newdata = new_data_social_male, type = "response", se.fit = TRUE) %>%
+pred_male_social <- predict(male_avgm, newdata = new_data_social_male, type = "conditional", se.fit = TRUE, re.form = NA) %>%
   unlist() %>% 
   as.data.frame()
 
@@ -888,7 +861,11 @@ pred_male_social_2 <- pred_male_social %>%
   slice(6:10) %>% 
   rename(SE = ".")
   
-pred_male_social <- cbind(new_data_social_male, pred_male_social_1)
+pred_male_social <- cbind(new_data_social_male, pred_male_social_1, pred_male_social_2) %>% 
+  rename(Proportion_focal = mean_estimate) %>% 
+  mutate(Upper = Proportion_focal + SE,
+         Lower = Proportion_focal - SE)
+  
 
 # Plot
 
@@ -897,8 +874,8 @@ Male_social_plot <- Male_fitness %>%
   geom_quasirandom(data = Male_fitness, width = 0.3, alpha =  0.3, pch = 21, colour = 'grey21', aes(size = Offspring_counted)) +
   scale_size_continuous(range = c(0.5, 6), labels = NULL, breaks = c(20, 40, 60, 80, 100, 120)) +
  scale_fill_manual(values = c("Barcelona" = "#fcde9c", "Brownsville" = "#f58670", "Dahomey" = "#e34f6f", "Israel" = "#d72d7c" , "Sweden" = "#7c1d6f")) +
-  geom_point(data = pred_male_social, aes(x = Social_haplotype, y = mean_estimate), size = 3, colour='black') +
-  #geom_errorbar(data = pred_focal_male, aes(x = Focal_haplotype, ymax = Upper, ymin = Lower, width = 0), colour = "black") +
+  geom_point(data = pred_male_social, aes(x = Social_haplotype, y = Proportion_focal), size = 3, colour='black') +
+  geom_errorbar(data = pred_male_social, aes(x = Social_haplotype, ymax = Upper, ymin = Lower, width = 0), colour = "black") +
   labs(x = "Female mtDNA haplotype", y = "Proportion of offspring sired by focal male") +
   theme_minimal() +
   theme(legend.position = "none") +
