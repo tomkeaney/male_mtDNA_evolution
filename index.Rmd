@@ -17,7 +17,7 @@ editor_options:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, cache = FALSE, warning = FALSE, message = FALSE)
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE, warning = FALSE, message = FALSE)
 ```
 
 # Supplementary methods
@@ -536,7 +536,7 @@ Zi (zero-hurdle requirement) and conditional (after hurdle)  model coefficients,
 
 ```{r female model averaging}
 
-# We need to create the top_survival_models object and average from that so that we can get mean estimates successfully using predict(), fitted() or eemeans()
+# We need to create the top_survival_models object and average from that so that we can get mean estimates successfully using predict()
 
 top_female_models <- get.models(female_dredge, subset = delta < 6)
 
@@ -565,11 +565,39 @@ Female_model_avg %>%
 
 ```
 
-**WHAT IS GOING ON WITH PREDICT?**
 
 ```{r female figure, fig.width=11, fig.height=8.5}
 
 # Plotting with model predictions
+
+# predict.averaging does not return predictions for the conditional estimates (i.e. model coefficients averaged over models that contain the relevant predictor, rather than over the full specified subset). To predict mean estimates for each categorical variable, I can get these model averaged estimates by manually specifying the models I want to be avergaged. These are used only for plotting.
+
+# First average models that contain the predictor focal haplotype in the Zi formual. These were found by inspection of the top model list above.
+
+focal_female_zi_models <- get.models(female_dredge, subset = "26")
+
+# Note that only model "26' contains focal haplotype in the Zi formula. No averaging takes place and estimates are derived straight from this model. The conditional averaged estimates from the female_avgm object are identical to the estimates in model "26".
+
+# fit model "26"
+
+focal_zi_female_avg <- glmmTMB(Maternal_total_offspring ~ Focal_haplotype + (1|Strain) + (1|Block), data = female_reproductive_output, family = list(family="truncated_nbinom1",link="log"), ziformula = ~ Focal_haplotype + Social_haplotype + (1|Strain) + (1|Block), na.action = na.fail, REML = FALSE)
+
+
+# Now average models that contain the social haplotype predictor in the Zi formula.
+
+social_female_zi_models <- get.models(female_dredge, subset = c("18", "17", "26"))
+
+social_zi_female_avg <- model.avg(social_female_zi_models)
+
+# The conditional averaged estimates from the female_avgm object are identical to the zi social haplotype estimates from the "full model "social_zi_female_avg" object.
+
+# Now average models that contain the focal haplotype predictor in the conditional formula.
+
+focal_female_con_models <- get.models(female_dredge, subset = c("18", "2", "26"))
+
+focal_con_female_avg <- model.avg(focal_female_con_models)
+
+# Estimates match female_avg
 
 # Make a new dataframe, for which we will derive predictions. It's the same as the old data, except that we set Focal haplotype, block and duplicate to the same value for all observations. The re.form = NA argument sets random effects to 0, meaning population means are calculated.
  
@@ -581,7 +609,7 @@ new_data <- female_reproductive_output %>%
 
 # First lets get predictions for the average number of offspring produced by females that produced at least one progeny, split by focal haplotype.
 
-pred <- predict(female_avgm, se.fit = TRUE, type = "conditional", re.form = NA, new_data) %>%
+pred <- predict(focal_con_female_avg, se.fit = TRUE, type = "conditional", re.form = NA, new_data) %>%
   unlist() %>% 
   as.data.frame()
 
@@ -613,14 +641,14 @@ female_focal_cond_plot <- female_cond_plot_data %>%
 scale_fill_manual(values = c("Barcelona" = "#fcde9c", "Brownsville" = "#f58670", "Dahomey" = "#e34f6f", "Israel" = "#d72d7c" , "Sweden" = "#7c1d6f")) +
 geom_point(data = pred, aes(x = Focal_haplotype, y = Maternal_total_offspring), size = 3, colour='black') +
   geom_errorbar(data = pred, aes(x = Focal_haplotype, ymax = Upper, ymin = Lower, width = 0), colour = "black") +
-  labs(x = "Female mtDNA haplotype", y = "Number of offspring produced") +
+  labs(x = "Female mtDNA haplotype", y = "Number of offspring produced by females") +
   theme_minimal() +
   theme(legend.position = "none") +
   theme(panel.grid.major.x = element_blank())
 
 # Now lets get the Zi predictions for focal haplotype
 
-pred_ZI <- predict(female_avgm, se.fit = TRUE, type = "zprob", re.form = NA, new_data) %>%
+pred_ZI <- predict(focal_zi_female_avg, se.fit = TRUE, type = "zprob", re.form = NA, new_data) %>%
   unlist() %>% 
   as.data.frame()
 
@@ -663,7 +691,7 @@ new_data_social <- female_reproductive_output %>%
 
 # Get zi social haplotype predictions
 
-pred_social_ZI <- predict(female_avgm, se.fit = TRUE, type = "zprob", re.form = NA, new_data_social) %>%
+pred_social_ZI <- predict(social_zi_female_avg, se.fit = TRUE, type = "zprob", re.form = NA, new_data_social) %>%
   unlist() %>% 
   as.data.frame()
 
@@ -691,39 +719,32 @@ female_social_zi_plot <- pred_focal_ZI_social %>%
   theme_minimal() +
   theme(legend.position = "none") +
   theme(panel.grid.major.x = element_blank())
-  
-ggarrange(female_focal_zi_plot, female_social_zi_plot, female_focal_cond_plot, labels = c("a", "b", "c"))
 
+ggarrange(female_focal_zi_plot, female_social_zi_plot, female_focal_cond_plot, labels = c("a", "b", "c"))
+  
 ```
 
-**Figure 1:** mtDNA directly and indirectly affects female fitness. Panels **a** and **b** show the mean proportion of females that produced offspring (the zero-inflated or hurdle component of the model) across **a** female focal haplotypes and **b** social male haplotypes. Error bars depict standard errors. Panel **c** shows the direct effect of mtDNA on the number of offspring produced by a female. Black points show the mean with standard error for each haplotype, while coloured points represent each individual data point.
+**Figure 1:** mtDNA directly and indirectly affects female fitness. Panels **a** and **b** show model predictions of the mean proportion of females that produced offspring (the zero-inflated or hurdle component of the model) across **a** female focal haplotypes and **b** social male haplotypes. Error bars depict standard errors. Panel **c** shows the direct effect of mtDNA on the number of offspring produced by a female. Black points show model predictions of the mean with standard error for each haplotype, while coloured points represent offspring produced by individual females.
 
 
 ### Male adult fitness
 * * *
 
-We measure male fitness as the proportion of offspring sired by an experimental mitochondrial strain male while competing against a standard _bw_ male.
+Our measure of male fitness involves both pre- and post-copulatory competitive ability; that is we assess in one measure the combination of 1) the ability of a male to inseminate a female in the presence of another male and 2) the competitive ability of his sperm within females that have been inseminated by another male. Interestingly, the data contains many 0 or 1 values - corresponding to a monopoly of female fertilisation by one of the males. *SOMETHING ABOUT THE BETA BINOMIAL DISTRIBUTION *
 
-However, our measure of male fitness involves both pre- and post-copulatory competitive ability; that is we assess in one measure the combination of 1) the ability of a male to inseminate a female in the presence of another male and 2) the competitive ability of his sperm within females that have been inseminated by another male. Interestingly, the data contains many 0 or 1 values - corresponding to a monopoly of female fertilisation by one of the males.
+We analyse male fitness as the proportion of offspring produced by mitochondrial strain males competing against a standard _bw_ male competitor. 
 
-The Brownsville haplotype renders males sterile alongside the _w^1118^_ nuclear background and sub-fertile alongside all other tested backgrounds. In our experiment, we find that Brownsville males are able to produce offspring but to a very limited capacity. Due to this, our model will not converge with the Brownsville males in the data-set. Therefore, we acknowledge that there is an effect of the Brownsville focal haplotype on male fitness and then remove it from the data-set.
+The Brownsville haplotype renders males sterile alongside the _w^1118^_ nuclear background and sub-fertile alongside all other tested backgrounds. In our experiment, we find that Brownsville males are able to produce offspring but to a very limited capacity. Due to this, our model is unable to produce reliable estimates when the interaction between focal and social haplotype is included. We do not include the interaction in the full model.
 
-We fit a success / failure binomial model:
-
-_(Focal_male_offspring, bw_offspring) ~ Focal_haplotype * Social_haplotype + (1|Strain) + (1|Block) + (1|Individual)_
+_(Focal_male_offspring, bw_offspring) ~ Focal_haplotype + Social_haplotype + (1|Strain) + (1|Block) + (1|Individual)_ 
 
 ```{r male model}
-Male_fitness_without_Brownsville <- Male_fitness %>%
-  filter(Focal_haplotype != "Brownsville")
-  
-response <- cbind(Male_fitness_without_Brownsville$Focal_male_offspring, Male_fitness_without_Brownsville$bw_male_offspring)
 
-Male_model_glmmTMB <- glmmTMB(response ~ Focal_haplotype * Social_haplotype + (1|Strain) + (1|Block) + (1|Individual), data = Male_fitness_without_Brownsville, family = "binomial", ziformula = ~0, na.action = na.fail)
+response <- cbind(Male_fitness$Focal_male_offspring, Male_fitness$bw_male_offspring)
 
-
+male_binary_model <- glmmTMB(response ~ Focal_haplotype + Social_haplotype + (1|Block) + (1|Strain) + (1|Individual), data = Male_fitness, family = "betabinomial", na.action = na.fail)
 
 ```
-
 
 #### Model evaluation
 
@@ -731,11 +752,7 @@ Male_model_glmmTMB <- glmmTMB(response ~ Focal_haplotype * Social_haplotype + (1
 **Table S5**: Evaluation of the male adult fitness model. All possible models were evaluated from the global model that included an interaction between focal haplotype and social haplotype and the random factors Strain, Block and Individual. As there was no clear top model, the final model was calculated via model averaging.
 ```{r male dredge table}
 
-if(file.exists("male_dredge.rds")){ # If already done, just load the results
-  male_dredge <- readRDS("male_dredge.rds")
-} else {male_dredge <- dredge(Male_model_glmmTMB) # If not already done, run all the models and save the results
-lapply(c("male_dredge"), save_it)
-}
+male_dredge <- dredge(male_binary_model)
 
 Male_table <- subset(male_dredge, delta < 6) %>% as.data.frame()
 
@@ -767,7 +784,6 @@ top_male_models <- get.models(male_dredge, subset = delta < 6)
 
 male_avgm <- model.avg(top_male_models)
 
-
 # extract useful information
 
 RVI_male <- MuMIn::sw(male_dredge)
@@ -781,42 +797,57 @@ Male_estimate <- coefTable(model.avg(male_dredge, subset = delta < 6)) %>% as.da
 
 Male_model_avg <- data.frame(Male_estimate, Male_CIs) %>% select(Estimate, Std..Error,  X2.5.., X97.5..)
 
-row.names(Male_model_avg) <- c("Intercept", "Social haplotype: Brownsville", "Social haplotype: Dahomey", "Social haplotype: Israel", "Social haplotype: Sweden", "Focal haplotype: Dahomey", "Focal haplotype: Israel", "Focal haplotype: Sweden")
+row.names(Male_model_avg) <- c("Intercept", "Focal haplotype: Brownsville", "Focal haplotype: Dahomey", "Focal haplotype: Israel", "Focal haplotype: Sweden", "Social haplotype: Brownsville", "Social haplotype: Dahomey", "Social haplotype: Israel", "Social haplotype: Sweden")
 
 names(Male_model_avg)[names(Male_model_avg) == "Estimate"] <- "Conditional average estimate"
 names(Male_model_avg)[names(Male_model_avg) == "Std..Error"] <- "Standard Error"
 names(Male_model_avg)[names(Male_model_avg) == "X2.5.."] <- "2.5% Interval"
 names(Male_model_avg)[names(Male_model_avg) == "X97.5.."] <- "97.5% Interval"
 
-pander(Male_model_avg, split.cell = 40, split.table = Inf, emphasize.strong.rows = (2), round = 3)
+pander(Male_model_avg, split.cell = 40, split.table = Inf, emphasize.strong.rows = 2, round = 3)
 
 ```
 
 
 ```{r male figure, fig.width= 8.5, fig.height= 6}
 
-# Ok so this isn't very useful, the probabilities returned very a heap depending on the level set for the Individual random effect, and I can't get SE for some reason.
+# predict.averaging does not return predictions for the conditional estimates (i.e. model coefficients averaged over models that contain the relevant predictor, rather than over the full specified subset). To predict mean estimates for each categorical variable, I can get these model averaged estimates by manually specifying the models I want to be avergaged. These are used only for plotting.
+
+# First average models that contain the predictor focal haplotype. These were found by inspection of the top model list above.
+
+focal_male_models <- get.models(male_dredge, subset = c("2", "4"))
+
+focal_male_avg <- model.avg(focal_male_models)
+
+# Note that the conditional averaged estimates from the male_avgm object are identical to the full averaged estimates for the focal_male_avg object for focal haplotype.
+
+# Now average models that contain the social haplotype predictor.
+
+social_male_models <- get.models(male_dredge, subset = c("4"))
+
+# Note that there is only one model (the original full model) that contains social haplotype in the < 6 delta subset, so estimates are calculated directly from this model - no averaging occurs. The conditional averaged estimates from the male_avgm object are identical to the estimates from the full model.
+
+
 
 # Focal new data
 
 new_data_male <- Male_fitness %>%
   ungroup() %>%
-  select(Focal_haplotype, Strain, Block, Individual) %>%
-  mutate(Social_haplotype = "Barcelona", Strain = "Barcelona 1", Block = "1", Individual = "4") %>% 
-  distinct() %>% 
-  slice(-2)
+  select(Focal_haplotype, Block, Strain, Individual) %>%
+  mutate(Social_haplotype = "Barcelona", Block = "1", Strain = "Barcelona 1", Individual = "4") %>% 
+  distinct() 
 
 
-pred_male_focal <- predict(male_avgm, newdata = new_data_male, type = "conditional", se.fit = TRUE, re.form = NA) %>%
+pred_male_focal <- predict(focal_male_avg, newdata = new_data_male, type = "response", se.fit = TRUE, re.form = NA) %>%
   unlist() %>% 
   as.data.frame()
 
 pred_male_focal_1 <- pred_male_focal %>% 
-  slice(1:4) %>% 
+  slice(1:5) %>% 
   rename(mean_estimate = ".")
 
 pred_male_focal_2 <- pred_male_focal %>% 
-  slice(5:8) %>% 
+  slice(6:10) %>% 
   rename(SE = ".")
   
 pred_focal_male <- cbind(new_data_male, pred_male_focal_1, pred_male_focal_2) %>% 
@@ -830,7 +861,6 @@ Male_focal_plot <- Male_fitness %>%
   ggplot(aes(x = Focal_haplotype, y = Proportion_focal, fill = Focal_haplotype, colour = Focal_haplotype)) +
   geom_quasirandom(data = Male_fitness, width = 0.3, alpha =  0.3, pch = 21, colour = 'grey21', aes(size = Offspring_counted)) +
   scale_size_continuous(range = c(0.5, 6), labels = NULL, breaks = c(20, 40, 60, 80, 100, 120)) +
-  #scale_colour_manual(values = c("Barcelona" = "#a50f15", "Brownsville" = "#fe9929", "Dahomey" = "#41b6c4", "Israel" = "#238443" , "Sweden" = "#4a1486")) +
   scale_fill_manual(values = c("Barcelona" = "#fcde9c", "Brownsville" = "#f58670", "Dahomey" = "#e34f6f", "Israel" = "#d72d7c" , "Sweden" = "#7c1d6f")) +
   geom_point(data = pred_focal_male, aes(x = Focal_haplotype, y = Proportion_focal), size = 3, colour='black') +
   geom_errorbar(data = pred_focal_male, aes(x = Focal_haplotype, ymax = Upper, ymin = Lower, width = 0), colour = "black") +
@@ -844,12 +874,13 @@ Male_focal_plot <- Male_fitness %>%
 
 new_data_social_male <- Male_fitness %>%
   ungroup() %>%
-  select(Social_haplotype, Strain, Block, Individual) %>%
-  mutate(Focal_haplotype = "Barcelona", Strain = "Barcelona 1", Block = "1", Individual = "4") %>% 
+  select(Social_haplotype, Block, Strain, Individual) %>%
+  mutate(Focal_haplotype = "Barcelona", Block = "1", Strain = "Barcelona 1", Individual = "4") %>% 
   distinct()
 
+# predict.averaging works over the full average rather than the conditional average that we present. I use a workaround where I create another model average object but only using the models in the < 6 delta subset that include social haplotype. Here only two models make the cut - the full model is the only one containing social haplotype as a predictor so no averaging is neccessary. Plug the full model into the predict function.
 
-pred_male_social <- predict(male_avgm, newdata = new_data_social_male, type = "conditional", se.fit = TRUE, re.form = NA) %>%
+pred_male_social <- predict(male_binary_model, newdata = new_data_social_male, type = "response", se.fit = TRUE, re.form = NA) %>%
   unlist() %>% 
   as.data.frame()
 
@@ -885,14 +916,14 @@ ggarrange(Male_focal_plot, Male_social_plot, labels = c("a", "b"))
 
 ```
 
-**Figure 2**: The proportion of offspring produced by _mt_-strain males competing with standard _bw_ males. **a** shows the direct effect of mtDNA on male fitness. **b** shows the indirect genetic effect of mtDNA on male fitness. Coloured points represent individual males, with larger points indicating a higher number of offspring produced in the vial (sired by either male). Black points show the mean proportion of offspring sired by the mt-strain male, with associated standard errors. **a** does not include a point estimate for the porportion of offspring sired by males carrying the Brownsville haplotype, as Brownsville was not included in the model. 
+**Figure 2**: The proportion of offspring produced by _mt_-strain males competing with standard _bw_ males. **a** shows the direct effect of mtDNA on male fitness. **b** shows the indirect genetic effect of female mtDNA on male fitness. Coloured points represent individual males, with larger points indicating a higher number of offspring produced in the vial (sired by either male). Black points show model predictions of the mean proportion of offspring sired by the _mt_-strain male, with associated standard errors.
 
 
 # Raw data and reproducibility
 
 ### Table of raw data
 
-For completeness, transparency and for purposes of data archiving, we include the raw data in this report.
+For the purposes of completeness, transparency and data archiving, we include the raw data in this report.
 
 
 **Table S6**: the raw data-set used in the present study, with NA values resulting from data collection mistakes removed (i.e. two females placed in competitive environment, no value recorded for whether the fly survived, flies that escaped during the experiment etc.).
