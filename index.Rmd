@@ -1,6 +1,6 @@
 ---
-title: Kin selection subverts mitochondrial transmission bias and allows male mtDNA evolution
-author: "Thomas Keaney, Heidi Wong, Damian Dowling, Theresa Jones, and Luke Holman"
+title: "Sibling rivalry vs mother’s curse: can kin competition facilitate adaptation of male mitochondrially-encoded traits?"  
+author: "Authors hidden for blind review"
 bibliography: "supp_references.bib"
 subtitle: Supplementary material
 output:
@@ -35,7 +35,6 @@ Here we include all code used to run our analysis, our rationale behind the mode
 
 #### Load packages, read in the data and create some helpful functions
 
-**EDIT THE PACKAGE LIST WHEN HAPPY WITH THE ANALYSIS**
 
 ```{r packages data and functions}
 
@@ -64,6 +63,10 @@ all_data <- read.csv("mtDNA_larval_competition_data.csv") %>%
 
 save_it <- function(object){
   saveRDS(get(object), file = paste(object, ".rds", sep = ""))}
+
+# Create a function for standard error
+
+SE <- function(x) sd(x)/sqrt(length(x))
 
 ```
 
@@ -149,17 +152,17 @@ We analysed the data using generalised linear mixed models in the `lmer` package
 
 **Fixed effects**
 
-For the analysis of fitness traits expressed in both sexes (survival, development time and body size), we are interested in the effect of an individual’s focal mtDNA, the mtDNA of a social competitor and the effect of sex on fitness. To identify these potential effects each model contained the following fixed effects and the three-way interaction between these variables:
+For the analysis of fitness traits expressed in both sexes (survival, development time and body size), we are interested in the effect of an individual’s focal mtDNA, the mtDNA of a social competitor and the effect of sex on fitness. To measure these potential effects each model contained the following fixed effects and the three-way interaction between these variables:
 
 Focal haplotype: the mtDNA haplotype that an individual carries.
 
 Social haplotype: the mtDNA haplotype carried by a social partner during larval development.
 
-Sex: is the focal individual female or male? The social partner's sex was always opposite to that of the focal individual.
+Sex: the sex of the focal individual. The social partner's sex was always opposite to that of the focal individual.
 
 **Random effects**
 
-Duplicate strain: Each haplotype has been introgressed alongside the _w^1118^_ nuclear background in two independent duplicates, creating 10 total strains. Within each block we ran multiple replicates that were made up of flies from the first set of strains (i.e. Barcelona 1, Brownsville 1 etc.), while the other half used only flies from strains denoted '2'. This random effect accounts for any residual differences in their nuclear genome, epigenome, microbiome or vial environment that may have arisen between duplicates.
+Duplicate strain: Each haplotype has been introgressed alongside the _w^1118^_ nuclear background in two independent duplicates, creating 10 total strains. Within each block we ran multiple replicates that were made up of flies from the first set of strains (i.e. Barcelona 1, Brownsville 1 etc.), while the other half used only flies from the second set of strains. This random effect accounts for any residual differences in the nuclear genome, epigenome, microbiome or vial environment that may have arisen between duplicates.
 
 Block: accounts for differences in the response variable between experimental blocks (e.g. to variance in temperature or composition of the fly food). In our experiment a block contained multiple replicates and a replicate was made up of 25 different cells each housing a pair of larvae.
 
@@ -268,6 +271,18 @@ pander(survival_model_avg, split.cell = 40, split.table = Inf, round = 3)
 ### Development time analysis
 * * *
 
+The model:
+
+_Dev_time ~ Focal_haplotype * Social_haplotype * Sex + (1|Strain) + (1|Block) + (1|Dyad_ID)_
+
+```{r dev time model}
+
+# Fit the linear model
+
+linear_dev_model <- lmer(Dev_time ~ Focal_haplotype * Social_haplotype * Sex + (1|Strain) + (1|Block) + (1|Dyad_ID), larval_development, na.action = na.fail, REML = FALSE)
+
+```
+
 ```{r dev time density plot}
 (
 density_development_plot <- ggplot(larval_development)+
@@ -301,25 +316,13 @@ density_development_plot <- ggplot(larval_development)+
 
 The response variable has a trimodal distribution, that can be potentially explained by the lab's artificial day-night cycle. When the lights turn on at 7am, eclosion is stimulated.
 
-The model:
-
-_Dev_time ~ Focal_haplotype * Social_haplotype * Sex + (1|Strain) + (1|Block) + (1|Dyad_ID)_
-
-```{r dev time model}
-
-# Fit the linear model
-
-linear_dev_model <- lmer(Dev_time ~ Focal_haplotype * Social_haplotype * Sex + (1|Strain) + (1|Block) + (1|Dyad_ID), larval_development, na.action = na.fail, REML = FALSE)
-
-```
-
 Lets have a look at model diagnostics
 
 ```{r dev time diagnostic plot}
 resid_panel(linear_dev_model)
 ```
 
-The data is trimodal and the residuals vs fitted plot indicates that the mean and variance are weakly positively correlated. The Q-Q Plot shows that points fall off at the extremes, but generally conform to a linear pattern. Linear models are somewhat robust against slightly non-normal data so we proceed with the analysis.
+The residuals vs fitted plot indicates that the mean and variance are weakly positively correlated. The Q-Q Plot shows that points fall off at the extremes, but generally conform to a linear pattern. Linear models are somewhat robust against slightly non-normal data so we proceed with the analysis, specifying that the response is distributed normally.
 
 #### Model evaluation
 
@@ -403,15 +406,6 @@ body_size_model <- lmer(Wing_length ~ Focal_haplotype * Social_haplotype * Sex +
 
 ```
 
-
-
-```{r size diagnostics,include=FALSE}
-
-# Lets have a look at model diagnostics
-
-resid_panel(body_size_model)
-```
-
 #### Model evaluation
 
 **Table S3**: Evaluation of the wing length model. All possible models were evaluated from the global model that included a three-way interaction between focal haplotype, social haplotype and sex, as well as the random factors Duplicate strain, Block and Dyad ID. There was a clear top model; coefficients are displayed in Table S4.
@@ -444,7 +438,7 @@ pander(size_table, split.cell = 40, split.table = Inf)
 
 #### Best fitting model
 
-There is a clear top model; model avergaing is not required.
+There is a clear top model; model averaging is not required.
 
 Model coefficients, standard error and 95% confidence limits listed in **Table 3** are shown are shown for the wing length top model. Bold rows indicate significant effects.
 
@@ -484,9 +478,7 @@ pander(Size_model_avg, split.cell = 40, split.table = Inf, emphasize.strong.rows
 
 To effectively accommodate zero-inflation, we modelled female offspring production using the `glmmTMB` package [@RN602]. This package allows us to fit hurdle models and zero-inflated models.
 
-Hurdle models treat zero-count and nonzero outcomes as two completely separate categories, while zero-inflated models treat zero-count outcomes as a mixture of structural and sampling zeros.
-
-We analysed the number of offspring produced by females using a hurdle model with negative binomial errors. This approach allowed us to answer two questions: (1) did mtDNA and/or competition affect the incidence of failing to produce any offspring? and (2) for females that produced at least one offspring, was the number of offspring produced affected by mtDNA/competition?
+We analysed the number of offspring produced by females using a hurdle model with negative binomial errors. This approach allowed us to answer two questions: (1) did mtDNA affect the incidence of failing to produce any offspring? and (2) for females that produced at least one offspring, was the number of offspring produced affected by mtDNA?
 
 The model:
 
@@ -566,13 +558,13 @@ Female_model_avg %>%
 ```
 
 
-```{r female figure, fig.width=11, fig.height=8.5}
+```{r female figure, fig.width=11, fig.height=11}
 
 # Plotting with model predictions
 
-# predict.averaging does not return predictions for the conditional estimates (i.e. model coefficients averaged over models that contain the relevant predictor, rather than over the full specified subset). To predict mean estimates for each categorical variable, I can get these model averaged estimates by manually specifying the models I want to be avergaged. These are used only for plotting.
+# predict.averaging does not return predictions for the conditional estimates (i.e. model coefficients averaged over models that contain the relevant predictor, rather than over the full specified subset). To predict mean estimates for each categorical variable, I can get these model averaged estimates by manually specifying the models I want to be averaged. These are used only for plotting.
 
-# First average models that contain the predictor focal haplotype in the Zi formual. These were found by inspection of the top model list above.
+# First average models that contain the predictor focal haplotype in the Zi formula. These were found by inspection of the top model list above.
 
 focal_female_zi_models <- get.models(female_dredge, subset = "26")
 
@@ -665,8 +657,6 @@ pred_focal_ZI <- cbind(new_data, pred_ZI_1, pred_ZI_2) %>%
   mutate(Upper = mean_estimate + SE,
          Lower = mean_estimate - SE)
   
-#rename(Maternal_total_offspring = mean_estimate)
-
 
 # Plot
   
@@ -720,21 +710,46 @@ female_social_zi_plot <- pred_focal_ZI_social %>%
   theme(legend.position = "none") +
   theme(panel.grid.major.x = element_blank())
 
-ggarrange(female_focal_zi_plot, female_social_zi_plot, female_focal_cond_plot, labels = c("a", "b", "c"))
+
+# Lets calculate mean estimates from the raw data for the number of offspring produced by females split by social haplotype. We can't use model predictions here because social haplotype is not retained in the conditional part of the model 
+
+female_reproductive_output_cond <- female_reproductive_output %>% 
+  filter(Maternal_total_offspring != 0)
+
+female_social_raw_cond <- female_reproductive_output_cond %>% 
+  dplyr::group_by(Social_haplotype) %>%
+  dplyr::summarise(Mean_offspring = sum(Maternal_total_offspring) / length(Maternal_total_offspring), Lower = (Mean_offspring - SE(Maternal_total_offspring)), Upper = (Mean_offspring + SE(Maternal_total_offspring)), n = n()) %>% 
+  rename(Maternal_total_offspring = Mean_offspring)
+
+female_social_cond_plot <- female_reproductive_output_cond %>%
+  ggplot(aes(x = Social_haplotype, y = Maternal_total_offspring, fill = Social_haplotype, colour = Social_haplotype)) +
+  geom_quasirandom(data = female_reproductive_output_cond, width = 0.3, size = 2, alpha =  0.5, pch = 21, colour = 'grey26') +
+scale_fill_manual(values = c("Barcelona" = "#fcde9c", "Brownsville" = "#f58670", "Dahomey" = "#e34f6f", "Israel" = "#d72d7c" , "Sweden" = "#7c1d6f")) +
+geom_point(data = female_social_raw_cond, aes(x = Social_haplotype, y = Maternal_total_offspring), size = 3, colour='black') +
+  geom_errorbar(data = female_social_raw_cond, aes(x = Social_haplotype, ymax = Upper, ymin = Lower, width = 0), colour = "black") +
+  labs(x = "Male mtDNA haplotype", y = "Number of offspring produced by females") +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  theme(panel.grid.major.x = element_blank())
+
+
+ggarrange(female_focal_zi_plot, female_social_zi_plot, female_focal_cond_plot, female_social_cond_plot, labels = c("a", "b", "c", "d"))
   
 ```
 
-**Figure 1:** mtDNA directly and indirectly affects female fitness. Panels **a** and **b** show model predictions of the mean proportion of females that produced offspring (the zero-inflated or hurdle component of the model) across **a** female focal haplotypes and **b** social male haplotypes. Error bars depict standard errors. Panel **c** shows the direct effect of mtDNA on the number of offspring produced by a female. Black points show model predictions of the mean with standard error for each haplotype, while coloured points represent offspring produced by individual females.
+**Figure 1:** mtDNA directly and indirectly affects female fitness. Panels **a** and **b** show model predictions of the mean proportion of females that produced offspring (the zero-inflated or hurdle component of the model) across **a** female focal mtDNA haplotypes and **b** social male mtDNA haplotypes.  Panels **c** and **d** show the direct and indirect effect of mtDNA on the number of offspring produced by a female. Black points show model predictions of the mean for each haplotype in **c** and mean estimates from the raw data in **d**, while coloured points represent offspring produced by individual females. Model predictions were not calculated for **d** because social haplotype was not retained as a predictor for the conditional component of the averaged hurdle model. Error bars depict standard errors in all plots.
 
 
 ### Male adult fitness
 * * *
 
-Our measure of male fitness involves both pre- and post-copulatory competitive ability; that is we assess in one measure the combination of 1) the ability of a male to inseminate a female in the presence of another male and 2) the competitive ability of his sperm within females that have been inseminated by another male. Interestingly, the data contains many 0 or 1 values - corresponding to a monopoly of female fertilisation by one of the males. *SOMETHING ABOUT THE BETA BINOMIAL DISTRIBUTION *
+Our measure of male fitness involves both pre- and post-copulatory competitive ability; that is we assess in one measure the combination of 1) the ability of a male to inseminate a female in the presence of another male and 2) the competitive ability of his sperm within females that have been inseminated by another male.
 
-We analyse male fitness as the proportion of offspring produced by mitochondrial strain males competing against a standard _bw_ male competitor. 
+We analyse male fitness as the proportion of offspring produced by mitochondrial strain males competing against a standard _bw_ male competitor. The data contains many 0 or 1 values - corresponding to a monopoly of female fertilisation by one of the males. To model this process we specify a beta-binomial distribution, which allows greater flexibility when modelling the distribution of the response, compared to standard binomial model. 
 
 The Brownsville haplotype renders males sterile alongside the _w^1118^_ nuclear background and sub-fertile alongside all other tested backgrounds. In our experiment, we find that Brownsville males are able to produce offspring but to a very limited capacity. Due to this, our model is unable to produce reliable estimates when the interaction between focal and social haplotype is included. We do not include the interaction in the full model.
+
+We include an additional random effect - Individual - in the model **FINISH THIS AFTER DISCUSSION WITH LUKE**
 
 _(Focal_male_offspring, bw_offspring) ~ Focal_haplotype + Social_haplotype + (1|Strain) + (1|Block) + (1|Individual)_ 
 
@@ -749,7 +764,7 @@ male_binary_model <- glmmTMB(response ~ Focal_haplotype + Social_haplotype + (1|
 #### Model evaluation
 
 
-**Table S5**: Evaluation of the male adult fitness model. All possible models were evaluated from the global model that included an interaction between focal haplotype and social haplotype and the random factors Strain, Block and Individual. As there was no clear top model, the final model was calculated via model averaging.
+**Table S5**: Evaluation of the male adult fitness model. All possible models were evaluated from the global model that included focal haplotype, social haplotype and the random factors Strain, Block and Individual. As there was no clear top model, the final model was calculated via model averaging.
 ```{r male dredge table}
 
 male_dredge <- dredge(male_binary_model)
@@ -940,37 +955,35 @@ Columns represent:
 
 **Block:** the distinct period of time that the particular individual was tested.
 
-**Strain:** Which of the 10 combinations of haplotype and duplicate strain was the individual from?
+**Strain:** which of the 10 combinations of haplotype and duplicate strain was the individual from?
 
-**Replicate:** A set of all possible combinations of the 5 haplotypes. Each replicate contained 25 cells.
+**Dyad_ID:** this identifies the pipette tip environment that the individual developed in.
 
-**Sex:** was the focal individual female or male?
+**Sex:** the sex of the focal individual.
 
-**Focal_haplotype:** what mtDNA haplotype did the focal individual carry?
+**Focal_haplotype:** the mtDNA haplotype carried by the focal individual.
 
-**Social_haplotype:** what mtDNA haplotype did the social competitor of the focal individual carry?
+**Social_haplotype:** the mtDNA haplotype carried by the focal individual carry.
 
 **Survived:** did the focal individual survive to adulthood (1) or die during larval development (0)?
 
 **Social_survival:** did the social competitor die as a larva (L), as a pupa (P) or survive to adulthood (N)?
 
-**Dev_time:** how many hours did it take for the focal individual to progress from an egg to an adult. NA values indicate where individuals did not survive or development time could not be measured.
+**Dev_time:** the hours taken for the focal individual to progress from an egg to an adult. NA values indicate where individuals did not survive or development time could not be measured.
 
-**Day:** how many days did it take the focal individual to develop?
+**Wing_length:** the length in mm of the focal individual's right wing.
 
-**Hours:** lights were turned on at 7am every morning. How many hours did it take for individuals to eclose after this time?
+**Maternal_female_offspring:** the number of adult female offspring the focal _mt_-strain female produced over a two day period.
 
-**Wing_length:** what was the length in mm of the focal individuals right wing?
+**Maternal_male_offspring:** the number of adult male offspring the focal _mt_-strain female produced over a two day period.
 
-**Maternal_female_offspring:** how many adult female offspring did a focal female produce in a two day period?
+**Maternal_total_offspring:** the total number of adult offspring the focal _mt_-strain female produced over a two day period.
 
-**Maternal_male_offspring:** how many adult male offspring did a focal female produce in a two day period?
+**Paternal_focal_offspring:** the number of red-eye phenotype offspring sired by a _mt_-strain male in the adult male fitness assay.
 
-**Maternal_total_offspring:** how many adult offspring did a focal female produce in a two day period?
+**Paternal_bw_offspring:** the number of brown-eye phenotype offspring sired by a _bw_ competitor male in the adult male fitness assay.
 
-**Paternal_focal_offspring:** how many red-eye phenotype offspring were there across the two vials in the male adult fitness assay?
-
-**Paternal_bw_offspring:** how many brown-eye phenotype offspring were there across the two vials in the male adult fitness assay?
+**Proportion focal:** the proportion of offspring produced by the _mt_-strain male in the adult male fitness assay.
 
 
 ### R session information
