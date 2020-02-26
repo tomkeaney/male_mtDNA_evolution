@@ -17,7 +17,7 @@ editor_options:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, cache = TRUE, warning = FALSE, message = FALSE)
+knitr::opts_chunk$set(echo = TRUE, cache = FALSE, warning = FALSE, message = FALSE)
 ```
 
 # Supplementary methods
@@ -33,7 +33,7 @@ img <- readPNG("Crossing_scheme.png")
  grid.raster(img)
 ```
 
-**Figure S1**: Crossing scheme used to create a standard homozygous GFP-w line. Males from this line were crossed with females carrying a specific mitochondrial haplotype, to create experimental mitolines. These newly produced lines carried the mitochondrial haplotype of the female and were heterozygous for the Sxl-GFP construct. G1 = the first generation of the cross.
+**Figure S1**: Crossing scheme used to create a standard homozygous _w^1118-GFP^_ line. Males from this line were crossed with females carrying a specific mitochondrial haplotype, to create experimental _mt_-strains. These newly produced strains carried the mitochondrial haplotype of the female and were heterozygous for the _Sxl-GFP_ construct. G1 = the first generation of the cross.
 
 
 # Data analysis and supplementary results
@@ -203,7 +203,8 @@ survival_model <- lme4::glmer(Survived ~ Focal_haplotype * Social_haplotype * Se
 
 #### Model evaluation
 
-**Table S1**: Evaluation of the survivorship model. All possible models were evaluated from the global model that included a three-way interaction between Focal haplotype, Social haplotype and Sex, as well as the random factors duplicate Strain, Block and Dyad ID. As there was no clear top model, the final model was calculated via model averaging.
+**Table S1**: Evaluation of the survivorship model. All possible models were evaluated from the global model that included a three-way interaction between focal haplotype, social haplotype and sex, as well as the random factors duplicate strain, block and dyad ID. As there was no clear top model, the final model was calculated via model averaging.
+
 ```{r survival dredge table}
 
 # Compare all possible combinations of models (from the global model)
@@ -320,7 +321,7 @@ density_development_plot <- ggplot(larval_development)+
 
 ```
 
-**Figure S2**: The distribution of egg-to-adult development time, split by sex. Dashed lines indicate when lights were turned each morning and highlight the relationship between light and eclosion.
+**Figure S2**: The distribution of egg-to-adult development time, split by sex. Dashed lines indicate when lights were turned on each morning and highlight the relationship between light and eclosion.
 
 The response variable has a trimodal distribution, that can be potentially explained by the lab's artificial day-night cycle. When the lights turn on at 7am, eclosion is stimulated.
 
@@ -334,7 +335,8 @@ The residuals vs fitted plot indicates that the mean and variance are weakly pos
 
 #### Model evaluation
 
-**Table S2**: Evaluation of the development time model. All possible models were evaluated from the global model that included a three-way interaction between Focal haplotype, Social haplotype and Sex as well as the random factors Strain and Block.  As there was no clear top model, the final model was calculated via model averaging.
+**Table S2**: Evaluation of the development time model. All possible models were evaluated from the global model that included a three-way interaction between focal haplotype, social haplotype and sex as well as the random factors duplicate strain, block and dyad ID.  As there was no clear top model, the final model was calculated via model averaging.
+
 ```{r dev time dredge table}
 # Use dredge to compare all possible models derived from the global model
 
@@ -416,7 +418,7 @@ body_size_model <- lmer(Wing_length ~ Focal_haplotype * Social_haplotype * Sex +
 
 #### Model evaluation
 
-**Table S3**: Evaluation of the wing length model. All possible models were evaluated from the global model that included a three-way interaction between focal haplotype, social haplotype and sex, as well as the random factors Duplicate strain, Block and Dyad ID. There was a clear top model; coefficients are displayed in Table S4.
+**Table S3**: Evaluation of the wing length model. All possible models were evaluated from the global model that included a three-way interaction between focal haplotype, social haplotype and sex, as well as the random factors duplicate strain, block and dyad ID. There was a clear top model; coefficients are displayed in Table 4.
 ```{r size dredge table}
 
 # Compare all possible combinations of models (from the global model)
@@ -498,7 +500,7 @@ female_hurdle_model <- glmmTMB(Maternal_total_offspring ~ Social_haplotype * Foc
 
 #### Model evaluation
 
-**Table S4**: Evaluation of the female reproductive output model. All possible models were evaluated from the global model that included an interaction between Focal haplotype and Social haplotype and the random factors Strain and Block. As there was no clear top model, the final model was calculated via model averaging. The zero-inflated results relate to whether a female produced any offspring, while the conditional results relate to the number of offspring produced by fertile females.
+**Table S4**: Evaluation of the female reproductive output model. All possible models were evaluated from the global model that included an interaction between focal haplotype and social haplotype and the random factors strain and block. As there was no clear top model, the final model was calculated via model averaging. The zero-inflated results relate to whether a female produced any offspring, while the conditional results relate to the number of offspring produced by fertile females.
 ```{r female dredge table}
 # Compare all possible combinations of models (from the global model)
 
@@ -772,7 +774,8 @@ male_binary_model <- glmmTMB(response ~ Focal_haplotype + Social_haplotype + (1|
 #### Model evaluation
 
 
-**Table S5**: Evaluation of the male adult fitness model. All possible models were evaluated from the global model that included focal haplotype, social haplotype and the random factors Strain, Block and Individual. As there was no clear top model, the final model was calculated via model averaging.
+**Table S5**: Evaluation of the male adult fitness model. All possible models were evaluated from the global model that included focal haplotype, social haplotype and the random factors strain, block and individual. As there was no clear top model, the final model was calculated via model averaging.
+
 ```{r male dredge table}
 
 male_dredge <- dredge(male_binary_model)
