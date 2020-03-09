@@ -24,7 +24,7 @@ knitr::opts_chunk$set(echo = TRUE, cache = FALSE, warning = FALSE, message = FAL
 
 Schematic for replacement of the unknown _Sxl-GFP_ nuclear background with the isogenic _w^1118^_ background
 
-```{r fig.width=5, fig.height=7}
+```{r fig.width=6, fig.height=8}
 
 library(png) # to load images
 library(grid) # to plot images
@@ -39,7 +39,7 @@ img <- readPNG("Crossing_scheme.png")
 # Data analysis and supplementary results
 
 
-Here we include all code used to run our analysis, our rationale behind the modelling approaches, and all remaining supplementary tables and figures.
+Here we include all code used to run our analysis and create Figure 1 and 2, our rationale behind the modelling approaches, and tables S1-8.
 
 #### Load packages, read in the data and create some helpful functions
 
@@ -180,8 +180,12 @@ Dyad ID: accounts for differences in the quality of the larval environment betwe
 
 Each model was evaluated and ranked by AICc values using the `dredge` function, from the `Mumin` package. There was rarely a single model that was unequivocally the best fit to the data, so we conducted model averaging for the set of models where delta was < 6, as suggested by Symonds and Moussalli [-@RN455]. The present study is a planned experiment to measure the effect of mtDNA on fitness, so we derived model estimates from the conditional model averages.
 
+$~$
+
 
 ## Larval fitness measures
+
+$~$
 
 
 ### Egg to adult viability analysis
@@ -235,10 +239,26 @@ names(survival_table)[names(survival_table) == "weight"] <- "Weight"
 pander(survival_table, split.cell = 40, split.table = Inf)
 ```
 
+$~$
+
+
+Relative variable importance for each of the predictors and interactions in the survival model set. RVI can be interpreted as the likelihood the model term is present in the best performing model from the initial full set of possible models.
+
+```{r}
+
+# present relative variable importance in a table 
+
+sw(survival_dredge) %>%
+  as.data.frame() %>%
+  pander(split.cell = 40, split.table = Inf, round = 3, col.names = "RVI")
+```
+
+$~$
+
+
 #### Model averaging
 
-
-Conditional model coefficients, standard error and 95% confidence limits listed in **Table 1** are shown for the survivorship to adulthood averaged model. Bold rows indicate significant effects.
+**Table S2**: Effects of mtDNA and sex on egg-to-adult viability.  Conditional estimates from model averaging the full generalised linear mixed model are shown. Models were included in the averaging subset if delta < 6. Bold rows indicate significant effects. 
 
 ```{r survival model averaging}
 
@@ -250,18 +270,15 @@ top_survival_models <- get.models(survival_dredge, subset = delta < 6)
 
 survival_avgm <- model.avg(top_survival_models)
 
-
-# extract useful information
-
-RVI_survival <- MuMIn::sw(survival_dredge)
-
 # average the models with delta < 6
 
-survival_CIs <- confint(model.avg(survival_dredge, subset = delta < 6)) %>% as.data.frame()
+survival_CIs <- confint(survival_avgm) %>% as.data.frame()
 
-survival_estimate <- coefTable(model.avg(survival_dredge, subset = delta < 6)) %>% as.data.frame()
+survival_estimate <- coefTable(survival_avgm) %>% as.data.frame()
 
-survival_model_avg <- data.frame(survival_estimate, survival_CIs) %>% select(Estimate, Std..Error,  X2.5.., X97.5..)
+survival_p_values <- summary(survival_avgm)$coefmat.subset[, 5] %>% as.data.frame() %>% rename(p = ".")
+
+survival_model_avg <- data.frame(survival_estimate, survival_CIs, survival_p_values) #%>% select(Estimate, Std..Error,  X2.5.., X97.5..)
 
 row.names(survival_model_avg) <- c("Intercept", "Sex: Male", "Focal haplotype: Brownsville", "Focal haplotype: Dahomey", "Focal haplotype: Israel", "Focal haplotype: Sweden", "Social haplotype: Brownsville", "Social haplotype: Dahomey", "Social haplotype: Israel", "Social haplotype: Sweden")
 
@@ -270,12 +287,14 @@ names(survival_model_avg)[names(survival_model_avg) == "Std..Error"] <- "Standar
 names(survival_model_avg)[names(survival_model_avg) == "X2.5.."] <- "2.5% Interval"
 names(survival_model_avg)[names(survival_model_avg) == "X97.5.."] <- "97.5% Interval"
 
-
 pander(survival_model_avg, split.cell = 40, split.table = Inf, round = 3)
 
 # The full average provides a parameter average across all models considered, including ones where the parameter coefficient is set to 0. The conditional average reports coefficents for only the models where the parameter is included.
 
 ```
+
+$~$
+
 
 ### Development time analysis
 * * *
@@ -288,61 +307,20 @@ _Dev_time ~ Focal_haplotype * Social_haplotype * Sex + (1|Strain) + (1|Block) + 
 
 # Fit the linear model
 
-linear_dev_model <- lmer(Dev_time ~ Focal_haplotype * Social_haplotype * Sex + (1|Strain) + (1|Block) + (1|Dyad_ID), larval_development, na.action = na.fail, REML = FALSE)
+dev_model <- lmer(Dev_time ~ Focal_haplotype * Social_haplotype * Sex + (1|Strain) + (1|Block) + (1|Dyad_ID), larval_development, na.action = na.fail, REML = FALSE)
 
 ```
-
-```{r dev time density plot}
-(
-density_development_plot <- ggplot(larval_development)+
-  stat_density_ridges(aes(x=Dev_time, y = NA, fill = Sex), alpha = 0.7, scale = 12, position = position_nudge(y = -0.5), show.legend = T) +
-  geom_vline(xintercept = 238, linetype = 2) +
-  geom_vline(xintercept = 262, linetype = 2) +
-  geom_vline(xintercept = 286, linetype = 2) +
-  xlab("Egg-to-adult development time (hours)") +
-  ylab("Kernel density estimate") +
-  theme_bw() +
-  scale_fill_manual(values = c("F" = "#ca562c", "M" = "#008080"), labels = c("Female", "Male")) +
-  scale_x_continuous(limits = c(220, 310), breaks = c(220, 230, 240, 250, 260, 270, 280, 290, 300, 310)) +
-  scale_y_discrete(expand = c(.0,0.0))+
-  theme(panel.spacing = unit(0.1, "lines"),
-        text = element_text(size=16),
-        panel.border= element_blank(),
-        axis.line=element_line(), 
-        panel.grid.major.x = element_blank(),
-        panel.grid.major.y = element_blank(),
-        panel.grid.minor.y = element_blank(),
-        panel.grid.minor.x = element_blank(),
-        axis.text.y=element_blank(),
-        axis.ticks.y=element_blank(),
-        axis.title.x = element_text(hjust = 0.5, size = 14))
-)
-
-
-```
-
-**Figure S2**: The distribution of egg-to-adult development time, split by sex. Dashed lines indicate when lights were turned on each morning and highlight the relationship between light and eclosion.
-
-The response variable has a trimodal distribution, that can be potentially explained by the lab's artificial day-night cycle. When the lights turn on at 7am, eclosion is stimulated.
-
-Lets have a look at model diagnostics
-
-```{r dev time diagnostic plot}
-resid_panel(linear_dev_model)
-```
-
-The residuals vs fitted plot indicates that the mean and variance are weakly positively correlated. The Q-Q Plot shows that points fall off at the extremes, but generally conform to a linear pattern. Linear models are somewhat robust against slightly non-normal data so we proceed with the analysis, specifying that the response is distributed normally.
 
 #### Model evaluation
 
-**Table S2**: Evaluation of the development time model. All possible models were evaluated from the global model that included a three-way interaction between focal haplotype, social haplotype and sex as well as the random factors duplicate strain, block and dyad ID.  As there was no clear top model, the final model was calculated via model averaging.
+**Table S3**: Evaluation of the development time model. All possible models were evaluated from the global model that included a three-way interaction between focal haplotype, social haplotype and sex as well as the random factors duplicate strain, block and dyad ID. As there was no clear top model, the final model was calculated via model averaging.
 
 ```{r dev time dredge table}
 # Use dredge to compare all possible models derived from the global model
 
-Dev_time_linear_dredge <- dredge(linear_dev_model)
+Dev_dredge <- dredge(dev_model)
 
-development_table <- subset(Dev_time_linear_dredge, delta < 6, recalc.weights = FALSE)  %>% as.data.frame()
+development_table <- subset(Dev_dredge, delta < 6, recalc.weights = FALSE)  %>% as.data.frame()
 
 names(development_table)[names(development_table) == "(Intercept)"] <- "Intercept"
 names(development_table)[names(development_table) == "Focal_haplotype"] <- "Focal haplotype"
@@ -361,25 +339,40 @@ pander(development_table, split.cell = 40, split.table = Inf)
 
 ```
 
+$~$
+
+
+Relative variable importance for each of the predictors and interactions in the development time model set.
+
+```{r}
+
+# present relative variable importance in a table 
+
+sw(Dev_dredge) %>%
+  as.data.frame() %>%
+  pander(split.cell = 40, split.table = Inf, round = 3, col.names = "RVI")
+```
+
+$~$
+
+
 #### Model averaging
 
-Conditional model coefficients, standard error and 95% confidence limits listed in **Table 2** are shown for the egg-to-adult development time averaged model. Bold rows indicate significant effects.
+**Table S4**: Effects of mtDNA and sex on egg-to-adult development time.  Conditional estimates from model averaging the full generalised linear mixed model are shown. Models were included in the averaging subset if delta < 6. Bold rows indicate significant effects.
 
 ```{r dev time model averaging}
 
-# first get the RVI for each predictor
-
-RVI_dev <- MuMIn::sw(Dev_time_linear_dredge)
-
 # Model averaging
 
-Dev_time_avg <- (model.avg(Dev_time_linear_dredge, subset = delta < 6))
+Dev_time_avg <- (model.avg(Dev_dredge, subset = delta < 6))
 
-Dev_CIs <- confint(model.avg(Dev_time_linear_dredge, subset = delta < 6)) %>% as.data.frame()
+Dev_CIs <- confint(Dev_time_avg) %>% as.data.frame()
 
-Dev_estimate <- coefTable(model.avg(Dev_time_linear_dredge, subset = delta < 6)) %>% as.data.frame()
+Dev_estimate <- coefTable(Dev_time_avg) %>% as.data.frame()
 
-Dev_model_avg <- data.frame(Dev_estimate, Dev_CIs) %>% select(Estimate, Std..Error,  X2.5.., X97.5..)
+Dev_p_values <- summary(Dev_time_avg)$coefmat.subset[, 5] %>% as.data.frame() %>% rename(p = ".")
+
+Dev_model_avg <- data.frame(Dev_estimate, Dev_CIs, Dev_p_values) %>% select(Estimate, Std..Error,  X2.5.., X97.5.., p)
 
 row.names(Dev_model_avg) <- c("Intercept", "Sex: Male", "Focal haplotype: Brownsville", "Focal haplotype: Dahomey", "Focal haplotype: Israel", "Focal haplotype: Sweden", "Social haplotype: Brownsville", "Social haplotype: Dahomey", "Social haplotype: Israel", "Social haplotype: Sweden")
 
@@ -393,8 +386,12 @@ pander(Dev_model_avg, split.cell = 40, split.table = Inf, emphasize.strong.rows 
 
 ```
 
+$~$
+
 
 ## Adult fitness measures
+
+$~$
 
 
 ### Body size analysis
@@ -418,7 +415,7 @@ body_size_model <- lmer(Wing_length ~ Focal_haplotype * Social_haplotype * Sex +
 
 #### Model evaluation
 
-**Table S3**: Evaluation of the wing length model. All possible models were evaluated from the global model that included a three-way interaction between focal haplotype, social haplotype and sex, as well as the random factors duplicate strain, block and dyad ID. There was a clear top model; coefficients are displayed in Table 4.
+**Table S5**: Evaluation of the wing length model. All possible models were evaluated from the global model that included a three-way interaction between focal haplotype, social haplotype and sex, as well as the random factors duplicate strain, block and dyad ID. There was a clear top model; coefficients are displayed in Table S6.
 ```{r size dredge table}
 
 # Compare all possible combinations of models (from the global model)
@@ -446,18 +443,31 @@ pander(size_table, split.cell = 40, split.table = Inf)
 
 ```
 
+$~$
+
+
+Relative variable importance for each of the predictors and interactions in the wing length model set.
+
+```{r}
+
+# present relative variable importance in a table 
+
+sw(body_size_dredge) %>%
+  as.data.frame() %>%
+  pander(split.cell = 40, split.table = Inf, round = 3, col.names = "RVI")
+```
+
+$~$
+
+
+
 #### Best fitting model
 
 There is a clear top model; model averaging is not required.
 
-Model coefficients, standard error and 95% confidence limits listed in **Table 3** are shown are shown for the wing length top model. Bold rows indicate significant effects.
+**Table S6**: Effects of mtDNA and sex on wing length. Results from the best fitting generalised linear mixed model are shown. Bold rows indicate significant effects.
 
 ```{r size best model}
-
-# first get the RVI for each predictor
-
-RVI_size <- MuMIn::sw(body_size_dredge)
-
 
 # Fit the top model
 
@@ -469,7 +479,9 @@ Size_CIs <- confint(body_size_model_final) %>%
 
 Size_estimate <- coefTable(body_size_model_final) %>% as.data.frame()
 
-Size_model_avg <- data.frame(Size_estimate, Size_CIs) %>% select(Estimate, Std..Error,  X2.5.., X97.5..)
+Size_p_values <- summary(body_size_model_final)$coefficients[, 5] %>% as.data.frame() %>% rename(p = ".")
+
+Size_model_avg <- data.frame(Size_estimate, Size_CIs, Size_p_values) %>% select(Estimate, Std..Error,  X2.5.., X97.5.., p)
 
 row.names(Size_model_avg) <- c("Intercept", "Sex: Male")
 
@@ -481,6 +493,8 @@ names(Size_model_avg)[names(Size_model_avg) == "X97.5.."] <- "97.5% Interval"
 pander(Size_model_avg, split.cell = 40, split.table = Inf, emphasize.strong.rows = (2), round = 3)
 
 ```
+
+$~$
 
 
 ### Female reproductive output
@@ -500,7 +514,7 @@ female_hurdle_model <- glmmTMB(Maternal_total_offspring ~ Social_haplotype * Foc
 
 #### Model evaluation
 
-**Table S4**: Evaluation of the female reproductive output model. All possible models were evaluated from the global model that included an interaction between focal haplotype and social haplotype and the random factors strain and block. As there was no clear top model, the final model was calculated via model averaging. The zero-inflated results relate to whether a female produced any offspring, while the conditional results relate to the number of offspring produced by fertile females.
+**Table S7**: Evaluation of the female reproductive output model. All possible models were evaluated from the global model that included an interaction between focal haplotype and social haplotype and the random factors strain and block. As there was no clear top model, the final model was calculated via model averaging. The zero-inflated results relate to whether a female produced any offspring, while the conditional results relate to the number of offspring produced by fertile females.
 ```{r female dredge table}
 # Compare all possible combinations of models (from the global model)
 
@@ -532,9 +546,27 @@ pander(female_table, split.cell = 40, split.table = Inf)
 
 ```
 
+$~$
+
+
+Relative variable importance for each of the predictors and interactions in the female reproductive output model set.
+
+```{r}
+
+# present relative variable importance in a table 
+
+sw(female_dredge) %>%
+  as.data.frame() %>%
+  pander(split.cell = 40, split.table = Inf, round = 3, col.names = "RVI")
+```
+
+$~$
+
+
+
 #### Model averaging
 
-Zi (zero-hurdle requirement) and conditional (after hurdle)  model coefficients, standard error and 95% confidence limits listed in **Table 4** are shown for the female offspring production averaged model. Bold rows indicate significant effects. 
+Zi (zero-hurdle requirement) and conditional (after hurdle)  model coefficients, standard error and 95% confidence limits listed in **Table 1** are shown for the female offspring production averaged model. Bold rows indicate significant effects. 
 
 ```{r female model averaging}
 
@@ -546,13 +578,13 @@ female_avgm <- model.avg(top_female_models)
 
 # extract useful info
 
-RVI_female <- MuMIn::sw(female_dredge)
+Female_CIs <- confint(female_avgm) %>% as.data.frame()
 
-Female_CIs <- confint(model.avg(female_dredge, subset = delta < 6)) %>% as.data.frame()
+Female_estimate <- coefTable(female_avgm) %>% as.data.frame()
 
-Female_estimate <- coefTable(model.avg(female_dredge, subset = delta < 6)) %>% as.data.frame()
+Female_p_values <- summary(female_avgm)$coefmat.subset[, 5] %>% as.data.frame() %>% rename(p = ".")
 
-Female_model_avg <- data.frame(Female_estimate, Female_CIs) %>% select(Estimate, Std..Error,  X2.5.., X97.5..)
+Female_model_avg <- data.frame(Female_estimate, Female_CIs, Female_p_values) %>% select(Estimate, Std..Error,  X2.5.., X97.5.., p)
 
 row.names(Female_model_avg) <- c("Conditional intercept", "Conditional focal haplotype: Brownsville", "Conditional focal haplotype: Dahomey", "Conditional focal haplotype: Israel", "Conditional focal haplotype: Sweden", "Zi intercept", "Zi social haplotype: Brownsville", "Zi social haplotype: Dahomey", "Zi social haplotype: Israel", "Zi social haplotype: Sweden", "Zi focal haplotype: Brownsville", "Zi focal haplotype: Dahomey", "Zi focal haplotype: Israel", "Zi focal haplotype: Sweden")
 
@@ -750,31 +782,38 @@ ggarrange(female_focal_zi_plot, female_social_zi_plot, female_focal_cond_plot, f
 **Figure 1:** mtDNA directly and indirectly affects female fitness. Panels **a** and **b** show model predictions of the mean proportion of females that produced offspring (the zero-inflated or hurdle component of the model) across **a** female focal mtDNA haplotypes and **b** social male mtDNA haplotypes.  Panels **c** and **d** show the direct and indirect effect of mtDNA on the number of offspring produced by a female. Black points show model predictions of the mean for each haplotype in **c** and mean estimates from the raw data in **d**, while coloured points represent offspring produced by individual females. Model predictions were not calculated for **d** because social haplotype was not retained as a predictor for the conditional component of the averaged hurdle model. Error bars depict standard errors in all plots.
 
 
-### Male adult fitness
+$~$
+
+
+### Male reproductive fitness
 * * *
 
 Our measure of male fitness involves both pre- and post-copulatory competitive ability; that is we assess in one measure the combination of 1) the ability of a male to inseminate a female in the presence of another male and 2) the competitive ability of his sperm within females that have been inseminated by another male.
 
-We analyse male fitness as the proportion of offspring produced by mitochondrial strain males competing against a standard _bw_ male competitor. The data contains many 0 or 1 values - corresponding to a monopoly of female fertilisation by one of the males. To model this process we specify a beta-binomial distribution, which allows greater flexibility when modelling the distribution of the response, compared to standard binomial model. 
+We analyse male fitness as the proportion of offspring produced by mitochondrial strain males competing against a standard _bw_ male competitor. The data contains many 0 or 1 values - corresponding to a monopoly of female fertilisation by one of the males. To model this process we specify a beta-binomial distribution, which allows greater flexibility when modelling the distribution of the response. 
 
 The Brownsville haplotype renders males sterile alongside the _w^1118^_ nuclear background and sub-fertile alongside all other tested backgrounds. In our experiment, we find that Brownsville males are able to produce offspring but to a very limited capacity. Due to this, our model is unable to produce reliable estimates when the interaction between focal and social haplotype is included. We do not include the interaction in the full model.
 
-We include an additional random effect - Individual - in the model **FINISH THIS AFTER DISCUSSION WITH LUKE**
+We include an additional random effect - MALE ID - in the model to account for repeated measures of each pair of focal and rival males.
 
-_(Focal_male_offspring, bw_offspring) ~ Focal_haplotype + Social_haplotype + (1|Strain) + (1|Block) + (1|Individual)_ 
+_(Focal_male_offspring, bw_offspring) ~ Focal_haplotype + Social_haplotype + (1|Strain) + (1|Block) + (1|Male_ID)_ 
 
 ```{r male model}
 
 response <- cbind(Male_fitness$Focal_male_offspring, Male_fitness$bw_male_offspring)
 
-male_binary_model <- glmmTMB(response ~ Focal_haplotype + Social_haplotype + (1|Block) + (1|Strain) + (1|Individual), data = Male_fitness, family = "betabinomial", na.action = na.fail)
+Male_fitness <- 
+  Male_fitness %>% 
+  rename(Male_ID = Individual)
+
+male_binary_model <- glmmTMB(response ~ Focal_haplotype + Social_haplotype + (1|Block) + (1|Strain) + (1|Male_ID), data = Male_fitness, family = "betabinomial", na.action = na.fail)
 
 ```
 
 #### Model evaluation
 
 
-**Table S5**: Evaluation of the male adult fitness model. All possible models were evaluated from the global model that included focal haplotype, social haplotype and the random factors strain, block and individual. As there was no clear top model, the final model was calculated via model averaging.
+**Table S8**: Evaluation of the male adult fitness model. All possible models were evaluated from the global model that included focal haplotype, social haplotype and the random factors strain, block and individual. As there was no clear top model, the final model was calculated via model averaging.
 
 ```{r male dredge table}
 
@@ -797,10 +836,27 @@ pander(Male_table, split.cell = 40, split.table = Inf)
 
 ```
 
+$~$
+
+
+Relative variable importance for each of the predictors and interactions in the male reproductive fitness model set.
+
+```{r}
+
+# present relative variable importance in a table 
+
+sw(male_dredge) %>%
+  as.data.frame() %>%
+  pander(split.cell = 40, split.table = Inf, round = 3, col.names = "RVI")
+```
+
+$~$
+
+
 
 #### Model averaging
 
-Model coefficients, standard error and 95% confidence limits listed in **Table 5** are shown for the male adult fitness averaged model. Bold rows indicate significant effects. 
+Model coefficients, standard error and 95% confidence limits listed in **Table 2** are shown for the male adult fitness averaged model. Bold rows indicate significant effects. 
 
 ```{r male model averaging}
 
@@ -812,16 +868,15 @@ male_avgm <- model.avg(top_male_models)
 
 # extract useful information
 
-RVI_male <- MuMIn::sw(male_dredge)
-
-
 # summary(model.avg(male_binary_dredge, subset = delta < 6))
 
-Male_CIs <- confint(model.avg(male_dredge, subset = delta < 6)) %>% as.data.frame()
+Male_CIs <- confint(male_avgm) %>% as.data.frame()
 
-Male_estimate <- coefTable(model.avg(male_dredge, subset = delta < 6)) %>% as.data.frame()
+Male_estimate <- coefTable(male_avgm) %>% as.data.frame()
 
-Male_model_avg <- data.frame(Male_estimate, Male_CIs) %>% select(Estimate, Std..Error,  X2.5.., X97.5..)
+Male_p_values <- summary(male_avgm)$coefmat.subset[, 5] %>% as.data.frame() %>% rename(p = ".")
+
+Male_model_avg <- data.frame(Male_estimate, Male_CIs, Male_p_values) %>% select(Estimate, Std..Error,  X2.5.., X97.5.., p)
 
 row.names(Male_model_avg) <- c("Intercept", "Focal haplotype: Brownsville", "Focal haplotype: Dahomey", "Focal haplotype: Israel", "Focal haplotype: Sweden", "Social haplotype: Brownsville", "Social haplotype: Dahomey", "Social haplotype: Israel", "Social haplotype: Sweden")
 
@@ -859,8 +914,8 @@ social_male_models <- get.models(male_dredge, subset = c("4"))
 
 new_data_male <- Male_fitness %>%
   ungroup() %>%
-  select(Focal_haplotype, Block, Strain, Individual) %>%
-  mutate(Social_haplotype = "Barcelona", Block = "1", Strain = "Barcelona 1", Individual = "4") %>% 
+  select(Focal_haplotype, Block, Strain, Male_ID) %>%
+  mutate(Social_haplotype = "Barcelona", Block = "1", Strain = "Barcelona 1", Male_ID = "4") %>% 
   distinct() 
 
 
@@ -900,8 +955,8 @@ Male_focal_plot <- Male_fitness %>%
 
 new_data_social_male <- Male_fitness %>%
   ungroup() %>%
-  select(Social_haplotype, Block, Strain, Individual) %>%
-  mutate(Focal_haplotype = "Barcelona", Block = "1", Strain = "Barcelona 1", Individual = "4") %>% 
+  select(Social_haplotype, Block, Strain, Male_ID) %>%
+  mutate(Focal_haplotype = "Barcelona", Block = "1", Strain = "Barcelona 1", Male_ID = "4") %>% 
   distinct()
 
 # predict.averaging works over the full average rather than the conditional average that we present. I use a workaround where I create another model average object but only using the models in the < 6 delta subset that include social haplotype. Here only two models make the cut - the full model is the only one containing social haplotype as a predictor so no averaging is neccessary. Plug the full model into the predict function.
@@ -945,6 +1000,9 @@ ggarrange(Male_focal_plot, Male_social_plot, labels = c("a", "b"))
 **Figure 2**: The proportion of offspring produced by _mt_-strain males competing with standard _bw_ males. **a** shows the direct effect of mtDNA on male fitness. **b** shows the indirect genetic effect of female mtDNA on male fitness. Coloured points represent individual males, with larger points indicating a higher number of offspring produced in the vial (sired by either male). Black points show model predictions of the mean proportion of offspring sired by the _mt_-strain male, with associated standard errors.
 
 
+$~$
+
+
 # Raw data and reproducibility
 
 ### Table of raw data
@@ -952,12 +1010,15 @@ ggarrange(Male_focal_plot, Male_social_plot, labels = c("a", "b"))
 For the purposes of completeness, transparency and data archiving, we include the raw data in this report.
 
 
-**Table S6**: the raw data-set used in the present study, with NA values resulting from data collection mistakes removed (i.e. two females placed in competitive environment, no value recorded for whether the fly survived, flies that escaped during the experiment etc.).
+**Table S9**: the raw data-set used in the present study, with NA values resulting from data collection mistakes removed (i.e. two females placed in competitive environment, no value recorded for whether the fly survived, flies that escaped during the experiment etc.).
 ```{r raw data}
 kable(fitness_data %>% filter(!is.na(Survived)), "html") %>%
   kable_styling() %>%
   scroll_box(width = "100%", height = "800px")
 ```
+
+
+$~$
 
 
 Columns represent:
