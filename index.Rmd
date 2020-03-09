@@ -278,7 +278,7 @@ survival_estimate <- coefTable(survival_avgm) %>% as.data.frame()
 
 survival_p_values <- summary(survival_avgm)$coefmat.subset[, 5] %>% as.data.frame() %>% rename(p = ".")
 
-survival_model_avg <- data.frame(survival_estimate, survival_CIs, survival_p_values) #%>% select(Estimate, Std..Error,  X2.5.., X97.5..)
+survival_model_avg <- data.frame(survival_estimate, survival_CIs, survival_p_values) %>% select(Estimate, Std..Error,  X2.5.., X97.5..)
 
 row.names(survival_model_avg) <- c("Intercept", "Sex: Male", "Focal haplotype: Brownsville", "Focal haplotype: Dahomey", "Focal haplotype: Israel", "Focal haplotype: Sweden", "Social haplotype: Brownsville", "Social haplotype: Dahomey", "Social haplotype: Israel", "Social haplotype: Sweden")
 
