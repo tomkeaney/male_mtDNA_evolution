@@ -1,6 +1,6 @@
 ---
-title: "Sibling rivalry vs mother’s curse: can kin competition facilitate adaptation of male mitochondrially-encoded traits?"  
-author: "Thomas A Keaney, Heidi WS Wong, Theresa M Jones, Damian K Dowling and Luke Holman"
+title: "Sibling rivalry vs mother’s curse: can kin competition facilitate a response to selection on male mitochondria?"  
+author: "Thomas A Keaney, Heidi WS Wong, Damian K Dowling, Therésa M Jones and Luke Holman"
 bibliography: "supp_references.bib"
 subtitle: Supplementary material
 output:
@@ -156,7 +156,7 @@ Male_fitness <- Male_fitness %>% filter(!(Offspring_counted == 0)) %>%
 
 ## Modelling approach
 
-We analysed the data using generalised linear mixed models in the `lmer` package for R.
+We analysed the data using linear and generalised linear mixed models in the `lmer` and`glmmTMB` packages for R.
 
 **Fixed effects**
 
@@ -190,8 +190,6 @@ $~$
 
 ### Egg to adult viability analysis
 * * *
-
-We fit a glm with binomial errors to model survival
 
 The model:
 
@@ -399,9 +397,6 @@ $~$
 
 We use wing length as a proxy for adult body size.
 
-
-It is distributed normally, so we fit a linear mixed model.
-
 The model:
 
 _Wing_length ~ Focal_haplotype * Social_haplotype * Sex + (1|Strain) + (1|Block) + (1|Dyad_ID)_
@@ -463,7 +458,7 @@ $~$
 
 #### Best fitting model
 
-There is a clear top model; model averaging is not required.
+One model was retained in the delta < 6 subset; model averaging is not required.
 
 **Table S6**: Effects of mtDNA and sex on wing length. Results from the best fitting generalised linear mixed model are shown. Bold rows indicate significant effects.
 
@@ -790,7 +785,7 @@ $~$
 
 Our measure of male fitness involves both pre- and post-copulatory competitive ability; that is we assess in one measure the combination of 1) the ability of a male to inseminate a female in the presence of another male and 2) the competitive ability of his sperm within females that have been inseminated by another male.
 
-We analyse male fitness as the proportion of offspring produced by mitochondrial strain males competing against a standard _bw_ male competitor. The data contains many 0 or 1 values - corresponding to a monopoly of female fertilisation by one of the males. To model this process we specify a beta-binomial distribution, which allows greater flexibility when modelling the distribution of the response. 
+We analyse male fitness as the proportion of offspring produced by _mt_-strain males competing against a standard _bw_ male competitor. The data contains many 0 or 1 values - corresponding to a monopoly of female fertilisation by one of the males. To model this process we specify a beta-binomial distribution, which allows greater flexibility when modelling the distribution of the response. 
 
 The Brownsville haplotype renders males sterile alongside the _w^1118^_ nuclear background and sub-fertile alongside all other tested backgrounds. In our experiment, we find that Brownsville males are able to produce offspring but to a very limited capacity. Due to this, our model is unable to produce reliable estimates when the interaction between focal and social haplotype is included. We do not include the interaction in the full model.
 
