@@ -20,34 +20,12 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE, cache = FALSE, warning = FALSE, message = FALSE)
 ```
 
-# Supplementary methods
+# Load all required packages
 
-Schematic for replacement of the unknown _Sxl-GFP_ nuclear background with the isogenic _w^1118^_ background
-
-```{r fig.width=6, fig.height=8}
+```{r, load packages}
 
 library(png) # to load images
 library(grid) # to plot images
-
-img <- readPNG("Crossing_scheme.png")
- grid.raster(img)
-```
-
-**Figure S1**: Crossing scheme used to create a standard homozygous _w^1118-GFP^_ line. Males from this line were crossed with females carrying a specific mitochondrial haplotype, to create experimental _mt_-strains. These newly produced strains carried the mitochondrial haplotype of the female and were heterozygous for the _Sxl-GFP_ construct. G1 = the first generation of the cross.
-
-
-# Data analysis and supplementary results
-
-
-Here we include all code used to run our analysis and create Figure 1 and 2, our rationale behind the modelling approaches, and tables S1-8.
-
-#### Load packages, read in the data and create some helpful functions
-
-
-```{r packages data and functions}
-
-# load relevant packages
-
 library(lme4) # for the lmer and glmer mixed model functions
 library(lmerTest) # Used to get p-values for lmer models using simulation. It over-writes lmer() with a new version, which gives p-values
 library(glmmTMB) # for zero-inflated or hurdle glms
@@ -60,6 +38,45 @@ library(ggResidpanel) # for model assumption plots
 library(kableExtra) # nice tables that can scroll
 library(pander) # more nice tables
 library(groupdata2) # for assigning rows in data-frames to groups
+
+```
+
+
+# Supplementary methods
+
+Schematic for replacement of the unknown _Sxl-GFP_ nuclear background with the isogenic _w^1118^_ background
+
+```{r fig.width=6, fig.height=8}
+
+img <- readPNG("Crossing_scheme.png")
+ grid.raster(img)
+```
+
+**Figure S1**: Crossing scheme used to create a standard homozygous _w^1118-GFP^_ line. Males from this line were crossed with females carrying a specific mitochondrial haplotype, to create experimental _mt_-strains. These newly produced strains carried the mitochondrial haplotype of the female and were heterozygous for the _Sxl-GFP_ construct. G1 = the first generation of the cross.
+
+
+
+**Table S1**: Recipe for food medium used in our experiment. The provided quantities make ~ 1 litre of food.
+
+```{r, food recipe}
+
+tibble("Ingredients" = c("Soyflour", "Cornmeal", "Yeast", "Dextrose", "Agar", "Water", "Tegosept", "Acid mix"),
+       "Quantity" = c("20 g", "73 g", "35 g", "75 g", "6 g", "1000 mls", "17 mls", "14 mls")) %>% 
+  pander()
+
+```
+
+
+
+# Data analysis and supplementary results
+
+
+Here we include all code used to run our analysis and create Figure 1 and 2, our rationale behind the modelling approaches, and tables S2-9.
+
+#### Read in the data and create some helpful functions
+
+
+```{r data and functions}
 
 # Read in data frame and add Dyad_ID column
 
@@ -205,7 +222,7 @@ survival_model <- lme4::glmer(Survived ~ Focal_haplotype * Social_haplotype * Se
 
 #### Model evaluation
 
-**Table S1**: Evaluation of the survivorship model. All possible models were evaluated from the global model that included a three-way interaction between focal haplotype, social haplotype and sex, as well as the random factors duplicate strain, block and dyad ID. As there was no clear top model, the final model was calculated via model averaging.
+**Table S2**: Evaluation of the survivorship model. All possible models were evaluated from the global model that included a three-way interaction between focal haplotype, social haplotype and sex, as well as the random factors duplicate strain, block and dyad ID. As there was no clear top model, the final model was calculated via model averaging.
 
 ```{r survival dredge table}
 
@@ -242,7 +259,7 @@ $~$
 
 Relative variable importance for each of the predictors and interactions in the survival model set. RVI can be interpreted as the likelihood the model term is present in the best performing model from the initial full set of possible models.
 
-```{r}
+```{r, survival RVI}
 
 # present relative variable importance in a table 
 
@@ -256,7 +273,7 @@ $~$
 
 #### Model averaging
 
-**Table S2**: Effects of mtDNA and sex on egg-to-adult viability.  Conditional estimates from model averaging the full generalised linear mixed model are shown. Models were included in the averaging subset if delta < 6. Bold rows indicate significant effects. 
+**Table S3**: Effects of mtDNA and sex on egg-to-adult viability.  Conditional estimates from model averaging the full generalised linear mixed model are shown. Models were included in the averaging subset if delta < 6. Bold rows indicate significant effects. 
 
 ```{r survival model averaging}
 
@@ -311,7 +328,7 @@ dev_model <- lmer(Dev_time ~ Focal_haplotype * Social_haplotype * Sex + (1|Strai
 
 #### Model evaluation
 
-**Table S3**: Evaluation of the development time model. All possible models were evaluated from the global model that included a three-way interaction between focal haplotype, social haplotype and sex as well as the random factors duplicate strain, block and dyad ID. As there was no clear top model, the final model was calculated via model averaging.
+**Table S4**: Evaluation of the development time model. All possible models were evaluated from the global model that included a three-way interaction between focal haplotype, social haplotype and sex as well as the random factors duplicate strain, block and dyad ID. As there was no clear top model, the final model was calculated via model averaging.
 
 ```{r dev time dredge table}
 # Use dredge to compare all possible models derived from the global model
@@ -342,7 +359,7 @@ $~$
 
 Relative variable importance for each of the predictors and interactions in the development time model set.
 
-```{r}
+```{r, dev time RVI}
 
 # present relative variable importance in a table 
 
@@ -356,7 +373,7 @@ $~$
 
 #### Model averaging
 
-**Table S4**: Effects of mtDNA and sex on egg-to-adult development time.  Conditional estimates from model averaging the full generalised linear mixed model are shown. Models were included in the averaging subset if delta < 6. Bold rows indicate significant effects.
+**Table S5**: Effects of mtDNA and sex on egg-to-adult development time.  Conditional estimates from model averaging the full generalised linear mixed model are shown. Models were included in the averaging subset if delta < 6. Bold rows indicate significant effects.
 
 ```{r dev time model averaging}
 
@@ -410,7 +427,7 @@ body_size_model <- lmer(Wing_length ~ Focal_haplotype * Social_haplotype * Sex +
 
 #### Model evaluation
 
-**Table S5**: Evaluation of the wing length model. All possible models were evaluated from the global model that included a three-way interaction between focal haplotype, social haplotype and sex, as well as the random factors duplicate strain, block and dyad ID. There was a clear top model; coefficients are displayed in Table S6.
+**Table S6**: Evaluation of the wing length model. All possible models were evaluated from the global model that included a three-way interaction between focal haplotype, social haplotype and sex, as well as the random factors duplicate strain, block and dyad ID. There was a clear top model; coefficients are displayed in Table S7.
 ```{r size dredge table}
 
 # Compare all possible combinations of models (from the global model)
@@ -443,7 +460,7 @@ $~$
 
 Relative variable importance for each of the predictors and interactions in the wing length model set.
 
-```{r}
+```{r, size RVI}
 
 # present relative variable importance in a table 
 
@@ -460,7 +477,7 @@ $~$
 
 One model was retained in the delta < 6 subset; model averaging is not required.
 
-**Table S6**: Effects of mtDNA and sex on wing length. Results from the best fitting generalised linear mixed model are shown. Bold rows indicate significant effects.
+**Table S7**: Effects of mtDNA and sex on wing length. Results from the best fitting generalised linear mixed model are shown. Bold rows indicate significant effects.
 
 ```{r size best model}
 
@@ -509,7 +526,7 @@ female_hurdle_model <- glmmTMB(Maternal_total_offspring ~ Social_haplotype * Foc
 
 #### Model evaluation
 
-**Table S7**: Evaluation of the female reproductive output model. All possible models were evaluated from the global model that included an interaction between focal haplotype and social haplotype and the random factors strain and block. As there was no clear top model, the final model was calculated via model averaging. The zero-inflated results relate to whether a female produced any offspring, while the conditional results relate to the number of offspring produced by fertile females.
+**Table S8**: Evaluation of the female reproductive output model. All possible models were evaluated from the global model that included an interaction between focal haplotype and social haplotype and the random factors strain and block. As there was no clear top model, the final model was calculated via model averaging. The zero-inflated results relate to whether a female produced any offspring, while the conditional results relate to the number of offspring produced by fertile females.
 ```{r female dredge table}
 # Compare all possible combinations of models (from the global model)
 
@@ -546,7 +563,7 @@ $~$
 
 Relative variable importance for each of the predictors and interactions in the female reproductive output model set.
 
-```{r}
+```{r, female RVI}
 
 # present relative variable importance in a table 
 
@@ -667,8 +684,8 @@ female_cond_plot_data <- female_reproductive_output %>%
 female_focal_cond_plot <- female_cond_plot_data %>%
   ggplot(aes(x = Focal_haplotype, y = Maternal_total_offspring, fill = Focal_haplotype, colour = Focal_haplotype)) +
   geom_quasirandom(data = female_cond_plot_data, width = 0.3, size = 2, alpha =  0.5, pch = 21, colour = 'grey26') +
-scale_fill_manual(values = c("Barcelona" = "#fcde9c", "Brownsville" = "#f58670", "Dahomey" = "#e34f6f", "Israel" = "#d72d7c" , "Sweden" = "#7c1d6f")) +
-geom_point(data = pred, aes(x = Focal_haplotype, y = Maternal_total_offspring), size = 3, colour='black') +
+  scale_fill_manual(values = c("Barcelona" = "#fcde9c", "Brownsville" = "#f58670", "Dahomey" = "#e34f6f", "Israel" = "#d72d7c" , "Sweden" = "#7c1d6f")) +
+  geom_point(data = pred, aes(x = Focal_haplotype, y = Maternal_total_offspring), size = 3, colour='black') +
   geom_errorbar(data = pred, aes(x = Focal_haplotype, ymax = Upper, ymin = Lower, width = 0), colour = "black") +
   labs(x = "Female mtDNA haplotype", y = "Number of offspring produced by females") +
   theme_minimal() +
@@ -700,13 +717,13 @@ pred_focal_ZI <- cbind(new_data, pred_ZI_1, pred_ZI_2) %>%
 female_focal_zi_plot <- pred_focal_ZI %>%
   ggplot(aes(x = Focal_haplotype, y = mean_estimate, fill = Focal_haplotype, colour = Focal_haplotype)) +
   geom_errorbar(aes(x = Focal_haplotype, ymax = Upper, ymin = Lower, width = 0), colour = "black") +
-  geom_point(aes(x = Focal_haplotype, y = mean_estimate), size = 4, pch =21, colour='grey26', fill = c("Barcelona" = "#fcde9c", "Brownsville" = "#f58670", "Dahomey" = "#e34f6f", "Israel" = "#d72d7c" , "Sweden" = "#7c1d6f")) +
+  geom_point(aes(x = Focal_haplotype, y = mean_estimate), size = 4, pch =21, colour='grey26') +
+  scale_fill_manual(values = c("Barcelona" = "#fcde9c", "Brownsville" = "#f58670", "Dahomey" = "#e34f6f", "Israel" = "#d72d7c" , "Sweden" = "#7c1d6f")) +
   labs(x = "Female mtDNA haplotype", y = "Proportion of females producing offspring") +
   ylim(0.4, 1) +
   theme_minimal() +
   theme(legend.position = "none") +
   theme(panel.grid.major.x = element_blank())
-  
 
 # Now create the newdata for social haplotype predictions
 
@@ -740,7 +757,8 @@ pred_focal_ZI_social <- cbind(new_data_social, pred_ZI_social_1, pred_ZI_social_
 female_social_zi_plot <- pred_focal_ZI_social %>%
   ggplot(aes(x = Social_haplotype, y = mean_estimate, fill = Social_haplotype, colour = Social_haplotype)) +
   geom_errorbar(aes(x = Social_haplotype, ymax = Upper, ymin = Lower, width = 0), colour = "black") +
-  geom_point(aes(x = Social_haplotype, y = mean_estimate), size = 4, pch =21, colour='grey26', fill = c("Barcelona" = "#fcde9c", "Brownsville" = "#f58670", "Dahomey" = "#e34f6f", "Israel" = "#d72d7c" , "Sweden" = "#7c1d6f")) +
+  geom_point(aes(x = Social_haplotype, y = mean_estimate), size = 4, pch =21, colour='grey26') +
+  scale_fill_manual(values = c("Barcelona" = "#fcde9c", "Brownsville" = "#f58670", "Dahomey" = "#e34f6f", "Israel" = "#d72d7c" , "Sweden" = "#7c1d6f")) +
   labs(x = "Male mtDNA haplotype", y = "Proportion of females producing offspring") +
   ylim(0.4, 1) +
   theme_minimal() +
@@ -808,7 +826,7 @@ male_binary_model <- glmmTMB(response ~ Focal_haplotype + Social_haplotype + (1|
 #### Model evaluation
 
 
-**Table S8**: Evaluation of the male adult fitness model. All possible models were evaluated from the global model that included focal haplotype, social haplotype and the random factors strain, block and individual. As there was no clear top model, the final model was calculated via model averaging.
+**Table S9**: Evaluation of the male adult fitness model. All possible models were evaluated from the global model that included focal haplotype, social haplotype and the random factors strain, block and individual. As there was no clear top model, the final model was calculated via model averaging.
 
 ```{r male dredge table}
 
@@ -836,7 +854,7 @@ $~$
 
 Relative variable importance for each of the predictors and interactions in the male reproductive fitness model set.
 
-```{r}
+```{r, male RVI}
 
 # present relative variable importance in a table 
 
@@ -1005,7 +1023,7 @@ $~$
 For the purposes of completeness, transparency and data archiving, we include the raw data in this report.
 
 
-**Table S9**: the raw data-set used in the present study, with NA values resulting from data collection mistakes removed (i.e. two females placed in competitive environment, no value recorded for whether the fly survived, flies that escaped during the experiment etc.).
+**Table S10**: the raw data-set used in the present study, with NA values resulting from data collection mistakes removed (i.e. two females placed in competitive environment, no value recorded for whether the fly survived, flies that escaped during the experiment etc.).
 ```{r raw data}
 kable(fitness_data %>% filter(!is.na(Survived)), "html") %>%
   kable_styling() %>%
