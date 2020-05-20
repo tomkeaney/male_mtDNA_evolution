@@ -28,13 +28,13 @@ library(png) # to load images
 library(grid) # to plot images
 library(lme4) # for the lmer and glmer mixed model functions
 library(lmerTest) # Used to get p-values for lmer models using simulation. It over-writes lmer() with a new version, which gives p-values
+library(emmeans) # for pairwise comparisons
 library(glmmTMB) # for zero-inflated or hurdle glms
 library(MuMIn) # for model selection and averaging
 library(tidyverse) # data re-shaping, ggplot, stringr and more
 library(ggridges) # for joy plots
 library(ggpubr) # for the ggarrange function
 library(ggbeeswarm) # violin plots with data points
-library(ggResidpanel) # for model assumption plots
 library(kableExtra) # nice tables that can scroll
 library(pander) # more nice tables
 library(groupdata2) # for assigning rows in data-frames to groups
@@ -60,7 +60,7 @@ img <- readPNG("Crossing_scheme.png")
 
 ```{r, food recipe}
 
-tibble("Ingredients" = c("Soyflour", "Cornmeal", "Yeast", "Dextrose", "Agar", "Water", "Tegosept", "Acid mix"),
+tibble("Ingredients" = c("Soy flour", "Cornmeal", "Yeast", "Dextrose", "Agar", "Water", "Tegosept", "Acid mix"),
        "Quantity" = c("20 g", "73 g", "35 g", "75 g", "6 g", "1000 mls", "17 mls", "14 mls")) %>% 
   pander()
 
@@ -308,6 +308,37 @@ pander(survival_model_avg, split.cell = 40, split.table = Inf, round = 3)
 
 ```
 
+#### Comparison of focal and social haplotype effect sizes {.tabset}
+
+While our experiment was not designed to calculate estimates of conventional selection and social selection, we present the standardised effect size for the difference in mean fitness between haplotype pairs, for direct and indirect fitness effects. While our power is low when making these contrasts, the aim here is to illustrate that the size of the direct and indirect effects on viability are of similar magnitudes.
+
+##### Focal haplotype effect sizes
+
+```{r}
+# Fit a simplified version of the mode without interactions that can be used with the emmeans() function. This model is reasonable as we detected no evidence for an interaction between any of our fixed effects in the above analysis.
+
+survival_emmeans <- glmer(Survived ~ Focal_haplotype + Social_haplotype + Sex + (1|Strain) + (1|Block) + (1|Dyad_ID), data = survival, family = "binomial", control = glmerControl(optimizer = "Nelder_Mead", optCtrl=list(maxfun=100000)), na.action = na.fail)
+
+# Now create the pairwise comparisons for focal haplotype
+
+pairs(emmeans(survival_emmeans, ~ Focal_haplotype, type = "response")) %>% 
+  as_tibble() %>% 
+  pander(split.cell = 40, split.table = Inf)
+
+```
+
+##### Social haplotype effect sizes
+
+```{r}
+# Now for social haplotype
+
+pairs(emmeans(survival_emmeans, ~ Social_haplotype, type = "response")) %>% 
+  as_tibble() %>% 
+  pander(split.cell = 40, split.table = Inf)
+
+```
+
+
 $~$
 
 
@@ -400,6 +431,37 @@ names(Dev_model_avg)[names(Dev_model_avg) == "X97.5.."] <- "97.5% Interval"
 pander(Dev_model_avg, split.cell = 40, split.table = Inf, emphasize.strong.rows = 2, round = 3)
 
 ```
+
+#### Comparison of focal and social haplotype effect sizes {.tabset}
+
+While our experiment was not designed to calculate estimates of conventional selection and social selection, we present the standardised effect size for the difference in mean fitness between haplotype pairs, for direct and indirect fitness effects. While our power is low when making these contrasts, the aim here is to illustrate that the size of the direct and indirect effects on development time are of similar magnitudes.
+
+##### Focal haplotype effect sizes
+
+```{r}
+# Fit a simplified version of the mode without interactions that can be used with the emmeans() function. This model is reasonable as we detected no evidence for an interaction between any of our fixed effects in the above analysis.
+
+dev_time_emmeans <- lmer(Dev_time ~ Focal_haplotype + Social_haplotype + Sex + (1|Strain) + (1|Block) + (1|Dyad_ID), larval_development, na.action = na.fail, REML = FALSE)
+
+# Now create the pairwise comparisons for focal haplotype
+
+pairs(emmeans(dev_time_emmeans, ~ Focal_haplotype, type = "response")) %>% 
+  as_tibble() %>% 
+  pander(split.cell = 40, split.table = Inf)
+
+```
+
+##### Social haplotype effect sizes
+
+```{r}
+# Now for social haplotype
+
+pairs(emmeans(dev_time_emmeans, ~ Social_haplotype, type = "response")) %>% 
+  as_tibble() %>% 
+  pander(split.cell = 40, split.table = Inf)
+
+```
+
 
 $~$
 
@@ -508,6 +570,39 @@ pander(Size_model_avg, split.cell = 40, split.table = Inf, emphasize.strong.rows
 
 $~$
 
+#### Comparison of focal and social haplotype effect sizes {.tabset}
+
+While our experiment was not designed to calculate estimates of conventional selection and social selection, we present the standardised effect size for the difference in mean fitness between haplotype pairs, for direct and indirect fitness effects. While our power is low when making these contrasts, the aim here is to illustrate that the size of the direct and indirect effects on body size are minimal and of similar magnitudes.
+
+##### Focal haplotype effect sizes
+
+```{r}
+# Fit a simplified version of the mode without interactions that can be used with the emmeans() function. This model is reasonable as we detected no evidence for an interaction between any of our fixed effects in the above analysis.
+
+size_emmeans <- lmer(Wing_length ~ Focal_haplotype + Social_haplotype + Sex + (1|Strain) + (1|Block) + (1|Dyad_ID), body_size, na.action = na.fail, REML = FALSE)
+
+# Now create the pairwise comparisons for focal haplotype
+
+pairs(emmeans(size_emmeans, ~ Focal_haplotype, type = "response")) %>% 
+  as_tibble() %>% 
+  pander(split.cell = 40, split.table = Inf)
+
+```
+
+##### Social haplotype effect sizes
+
+```{r}
+# Now for social haplotype
+
+pairs(emmeans(size_emmeans, ~ Social_haplotype, type = "response")) %>% 
+  as_tibble() %>% 
+  pander(split.cell = 40, split.table = Inf)
+
+```
+
+
+$~$
+
 
 ### Female reproductive output
 * * *
@@ -611,6 +706,80 @@ Female_model_avg %>%
 
 ```
 
+$~$
+
+
+#### Comparison of focal and social haplotype effect sizes 
+
+While our experiment was not designed to calculate estimates of conventional selection and social selection, we present the standardised effect size for the difference in mean fitness between haplotype pairs, for direct and indirect fitness effects. While our power is low when making these contrasts, the aim here is to illustrate that the size of the indirect effects on female reproductive output are of similar magnitudes to, or exceed the size of, focal haplotype effects.
+
+##### Did the female produce offspring (hurdle component of the model) {.tabset}
+
+
+###### Focal haplotype effect sizes
+
+
+```{r}
+# Fit a simplified version of the model without interactions that can be used with the emmeans() function. For the hurdle component of the model we simply fit a binary model with the response variable: did the female produce >= 1 offspring. This produces slightly different estimates from the full hurdle model but the effects sizes are extremely similar.
+
+female_reproductive_output_zi <- female_reproductive_output %>% 
+  mutate(produced_offspring = if_else(Maternal_total_offspring == 0, 0, 1))
+
+female_emmeans_h <- glmmTMB(produced_offspring ~ Social_haplotype + Focal_haplotype + (1|Strain) + (1|Block), data = female_reproductive_output_zi, family = binomial, na.action = na.fail, REML = FALSE)
+
+# Now create the pairwise comparisons for focal haplotype
+
+pairs(emmeans(female_emmeans_h, ~ Focal_haplotype, type = "response")) %>% 
+  as_tibble() %>% 
+  pander(split.cell = 40, split.table = Inf)
+
+```
+
+###### Social haplotype effect sizes
+
+```{r}
+# Now for social haplotype
+
+pairs(emmeans(female_emmeans_h, ~ Social_haplotype, type = "response")) %>% 
+  as_tibble() %>% 
+  pander(split.cell = 40, split.table = Inf)
+
+```
+
+
+##### The number of offspring produced by fertile females (conditional component of the model) {.tabset}
+
+
+###### Focal haplotype effect sizes
+
+```{r}
+# Fit a simplified version of the model without interactions that can be used with the emmeans() function. This model is reasonable as we detected no evidence for an interaction between any of our fixed effects in the above analysis.
+
+female_emmeans <- glmmTMB(Maternal_total_offspring ~ Social_haplotype + Focal_haplotype + (1|Strain) + (1|Block), data = female_reproductive_output, family = list(family="truncated_nbinom1",link="log"), ziformula = ~., na.action = na.fail, REML = FALSE)
+
+# Now create the pairwise comparisons for focal haplotype
+
+pairs(emmeans(female_emmeans, ~ Focal_haplotype, type = "response")) %>% 
+  as_tibble() %>% 
+  pander(split.cell = 40, split.table = Inf)
+
+```
+
+###### Social haplotype effect sizes
+
+```{r}
+# Now for social haplotype
+
+pairs(emmeans(female_emmeans, ~ Social_haplotype, type = "response")) %>% 
+  as_tibble() %>% 
+  pander(split.cell = 40, split.table = Inf)
+
+```
+
+$~$
+
+
+#### Create Figure 1
 
 ```{r female figure, fig.width=11, fig.height=11}
 
@@ -819,7 +988,7 @@ Male_fitness <-
   Male_fitness %>% 
   rename(Male_ID = Individual)
 
-male_binary_model <- glmmTMB(response ~ Focal_haplotype + Social_haplotype + (1|Block) + (1|Strain) + (1|Male_ID), data = Male_fitness, family = "betabinomial", na.action = na.fail)
+male_model <- glmmTMB(response ~ Focal_haplotype + Social_haplotype + (1|Block) + (1|Strain) + (1|Male_ID), data = Male_fitness, family = "betabinomial", na.action = na.fail)
 
 ```
 
@@ -830,7 +999,7 @@ male_binary_model <- glmmTMB(response ~ Focal_haplotype + Social_haplotype + (1|
 
 ```{r male dredge table}
 
-male_dredge <- dredge(male_binary_model)
+male_dredge <- dredge(male_model)
 
 Male_table <- subset(male_dredge, delta < 6) %>% as.data.frame()
 
@@ -902,6 +1071,41 @@ pander(Male_model_avg, split.cell = 40, split.table = Inf, emphasize.strong.rows
 
 ```
 
+$~$
+
+
+#### Comparison of focal and social haplotype effect sizes {.tabset}
+
+While our experiment was not designed to calculate estimates of conventional selection and social selection, we present the standardised effect size for the difference in mean fitness between haplotype pairs, for direct and indirect fitness effects. While our power is low when making these contrasts, the aim here is to illustrate that the size of the direct effects on male reproductive competiitve ability are much larger than the indirect effects.
+
+##### Focal haplotype effect sizes
+
+```{r}
+# We can use our original model
+
+# Now create the pairwise comparisons for focal haplotype
+
+pairs(emmeans(male_model, ~ Focal_haplotype, type = "response")) %>% 
+  as_tibble() %>% 
+  pander(split.cell = 40, split.table = Inf)
+
+```
+
+##### Social haplotype effect sizes
+
+```{r}
+# Now for social haplotype
+
+pairs(emmeans(male_model, ~ Social_haplotype, type = "response")) %>% 
+  as_tibble() %>% 
+  pander(split.cell = 40, split.table = Inf)
+
+```
+
+$~$
+
+
+#### Create Figure 2
 
 ```{r male figure, fig.width= 8.5, fig.height= 6}
 
@@ -974,7 +1178,7 @@ new_data_social_male <- Male_fitness %>%
 
 # predict.averaging works over the full average rather than the conditional average that we present. I use a workaround where I create another model average object but only using the models in the < 6 delta subset that include social haplotype. Here only two models make the cut - the full model is the only one containing social haplotype as a predictor so no averaging is neccessary. Plug the full model into the predict function.
 
-pred_male_social <- predict(male_binary_model, newdata = new_data_social_male, type = "response", se.fit = TRUE, re.form = NA) %>%
+pred_male_social <- predict(male_model, newdata = new_data_social_male, type = "response", se.fit = TRUE, re.form = NA) %>%
   unlist() %>% 
   as.data.frame()
 
@@ -1038,7 +1242,7 @@ Columns represent:
 
 **Individual:** the focal fly being tested.
 
-**Block:** the distinct period of time that the particular individual was tested.
+**Block:** the experiment was completed in six separate blocks, identified here 1-6.
 
 **Strain:** which of the 10 combinations of haplotype and duplicate strain was the individual from?
 
@@ -1048,11 +1252,9 @@ Columns represent:
 
 **Focal_haplotype:** the mtDNA haplotype carried by the focal individual.
 
-**Social_haplotype:** the mtDNA haplotype carried by the focal individual carry.
+**Social_haplotype:** the mtDNA haplotype carried by the focal individual's competitor.
 
 **Survived:** did the focal individual survive to adulthood (1) or die during larval development (0)?
-
-**Social_survival:** did the social competitor die as a larva (L), as a pupa (P) or survive to adulthood (N)?
 
 **Dev_time:** the hours taken for the focal individual to progress from an egg to an adult. NA values indicate where individuals did not survive or development time could not be measured.
 
