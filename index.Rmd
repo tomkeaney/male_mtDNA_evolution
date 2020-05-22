@@ -28,15 +28,14 @@ Article DOI: 10.1098/rspb.2020.0575
 
 ```{r, load packages}
 
+library(tidyverse) # data re-shaping, ggplot, stringr and more
 library(png) # to load images
 library(grid) # to plot images
 library(lme4) # for the lmer and glmer mixed model functions
-library(lmerTest) # Used to get p-values for lmer models using simulation. It over-writes lmer() with a new version, which gives p-values
-library(emmeans) # for pairwise comparisons
+library(lmerTest) # Used to get p-values for lmer models using simulation. It over-writes lmer() with a new version
 library(glmmTMB) # for zero-inflated or hurdle glms
 library(MuMIn) # for model selection and averaging
-library(tidyverse) # data re-shaping, ggplot, stringr and more
-library(ggridges) # for joy plots
+library(emmeans) # for pairwise comparisons
 library(ggpubr) # for the ggarrange function
 library(ggbeeswarm) # violin plots with data points
 library(kableExtra) # nice tables that can scroll
@@ -717,7 +716,7 @@ $~$
 
 While our experiment was not designed to calculate estimates of conventional selection and social selection, we present the standardised effect size for the difference in mean fitness between haplotype pairs, for direct and indirect fitness effects. Our aim is to illustrate that the size of the indirect effects on female reproductive output are of similar magnitudes to, or exceed the size of, focal haplotype effects.
 
-##### Did the female produce offspring (hurdle component of the model) {.tabset}
+##### Did the female produce offspring? (Hurdle component of the model) {.tabset}
 
 
 ###### Focal haplotype effect sizes
