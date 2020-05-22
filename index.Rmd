@@ -64,9 +64,9 @@ img <- readPNG("Crossing_scheme.png")
 
 ```{r, food recipe}
 
-tibble("Ingredients" = c("Soy flour", "Cornmeal", "Yeast", "Dextrose", "Agar", "Water", "Tegosept", "Acid mix"),
+tibble("Ingredients" = c("Soy flour", "Cornmeal", "Yeast", "Dextrose", "Agar", "Water", "Tegosept", "Acid mix (4 ml orthophosphoric acid, 41 ml propionic acid, 55 ml water to make 100 mls)"),
        "Quantity" = c("20 g", "73 g", "35 g", "75 g", "6 g", "1000 mls", "17 mls", "14 mls")) %>% 
-  pander()
+  pander(split.cell = 20, split.table = Inf)
 
 ```
 
@@ -314,7 +314,7 @@ pander(survival_model_avg, split.cell = 40, split.table = Inf, round = 3)
 
 #### Comparison of focal and social haplotype effect sizes {.tabset}
 
-While our experiment was not designed to calculate estimates of conventional selection and social selection, we present the standardised effect size for the difference in mean fitness between haplotype pairs, for direct and indirect fitness effects. While our power is low when making these contrasts, the aim here is to illustrate that the size of the direct and indirect effects on viability are of similar magnitudes.
+While our experiment was not designed to calculate estimates of conventional selection and social selection, we present the standardised effect size for the difference in mean fitness between haplotype pairs, for direct and indirect fitness effects. Our aim is to illustrate that the size of the direct and indirect effects on viability are of similar magnitudes.
 
 ##### Focal haplotype effect sizes
 
@@ -438,7 +438,7 @@ pander(Dev_model_avg, split.cell = 40, split.table = Inf, emphasize.strong.rows 
 
 #### Comparison of focal and social haplotype effect sizes {.tabset}
 
-While our experiment was not designed to calculate estimates of conventional selection and social selection, we present the standardised effect size for the difference in mean fitness between haplotype pairs, for direct and indirect fitness effects. While our power is low when making these contrasts, the aim here is to illustrate that the size of the direct and indirect effects on development time are of similar magnitudes.
+While our experiment was not designed to calculate estimates of conventional selection and social selection, we present the standardised effect size for the difference in mean fitness between haplotype pairs, for direct and indirect fitness effects. Our aim is to illustrate that the size of the direct and indirect effects on development time are of similar magnitudes.
 
 ##### Focal haplotype effect sizes
 
@@ -576,7 +576,7 @@ $~$
 
 #### Comparison of focal and social haplotype effect sizes {.tabset}
 
-While our experiment was not designed to calculate estimates of conventional selection and social selection, we present the standardised effect size for the difference in mean fitness between haplotype pairs, for direct and indirect fitness effects. While our power is low when making these contrasts, the aim here is to illustrate that the size of the direct and indirect effects on body size are minimal and of similar magnitudes.
+While our experiment was not designed to calculate estimates of conventional selection and social selection, we present the standardised effect size for the difference in mean fitness between haplotype pairs, for direct and indirect fitness effects. Our aim is to illustrate that the size of the direct and indirect effects on body size are minimal and of similar magnitudes.
 
 ##### Focal haplotype effect sizes
 
@@ -715,7 +715,7 @@ $~$
 
 #### Comparison of focal and social haplotype effect sizes 
 
-While our experiment was not designed to calculate estimates of conventional selection and social selection, we present the standardised effect size for the difference in mean fitness between haplotype pairs, for direct and indirect fitness effects. While our power is low when making these contrasts, the aim here is to illustrate that the size of the indirect effects on female reproductive output are of similar magnitudes to, or exceed the size of, focal haplotype effects.
+While our experiment was not designed to calculate estimates of conventional selection and social selection, we present the standardised effect size for the difference in mean fitness between haplotype pairs, for direct and indirect fitness effects. Our aim is to illustrate that the size of the indirect effects on female reproductive output are of similar magnitudes to, or exceed the size of, focal haplotype effects.
 
 ##### Did the female produce offspring (hurdle component of the model) {.tabset}
 
@@ -1080,7 +1080,7 @@ $~$
 
 #### Comparison of focal and social haplotype effect sizes {.tabset}
 
-While our experiment was not designed to calculate estimates of conventional selection and social selection, we present the standardised effect size for the difference in mean fitness between haplotype pairs, for direct and indirect fitness effects. While our power is low when making these contrasts, the aim here is to illustrate that the size of the direct effects on male reproductive competiitve ability are much larger than the indirect effects.
+While our experiment was not designed to calculate estimates of conventional selection and social selection, we present the standardised effect size for the difference in mean fitness between haplotype pairs, for direct and indirect fitness effects. Our aim is to illustrate that the size of the direct effects on male reproductive competitive ability are much larger than the indirect effects.
 
 ##### Focal haplotype effect sizes
 

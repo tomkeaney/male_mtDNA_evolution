@@ -1,0 +1,19 @@
+---
+title: "Sibling rivalry vs mother’s curse: can kin competition facilitate a response to selection on male mitochondria?"  
+author: "Thomas A Keaney, Heidi WS Wong, Damian K Dowling, Therésa M Jones and Luke Holman"
+subtitle: Supplementary material
+output:
+  pdf_document:
+    toc: no
+    number_sections: no
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, cache = FALSE, warning = FALSE, message = FALSE, fig.align = "center")
+```
+
+Click **[here](https://tomkeaney.github.io/male_mtDNA_evolution/)** to view the HTML report, which serves as online supplementary material for the associated paper (DOI: 10.1098/rspb.2020.0575). The report includes all supplementary figures and tables, the R script required to produce the analysis, figures and tables, and the raw data.
+
+The HTML report has also been desposited in the Dryad database **[here](https://doi.org/10.5061/dryad.np5hqbzq8)**.
