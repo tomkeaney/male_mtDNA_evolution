@@ -14,6 +14,6 @@ editor_options:
 knitr::opts_chunk$set(echo = FALSE, cache = FALSE, warning = FALSE, message = FALSE, fig.align = "center")
 ```
 
-Click **[here](https://tomkeaney.github.io/male_mtDNA_evolution/)** to view the HTML report, which serves as online supplementary material for the associated paper (DOI: 10.1098/rspb.2020.0575). The report includes all supplementary figures and tables, the R script required to produce the analysis, figures and tables, and the raw data.
+Click **[here](https://tomkeaney.github.io/male_mtDNA_evolution/)** to view the HTML report, which serves as online supplementary material for the associated paper (http://dx.doi.org/10.1098/rspb.2020.0575), published in _Proceedings of the Royal Society B_. The report includes all supplementary figures and tables, the R script required to produce the analysis, figures and tables, and the raw data.
 
 The HTML report has also been desposited in the Dryad database **[here](https://doi.org/10.5061/dryad.np5hqbzq8)**.

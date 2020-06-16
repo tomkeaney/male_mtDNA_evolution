@@ -22,7 +22,7 @@ knitr::opts_chunk$set(echo = TRUE, cache = FALSE, warning = FALSE, message = FAL
 
 Published in _Proceedings of the Royal Society B_
 
-Article DOI: 10.1098/rspb.2020.0575
+Article DOI: http://dx.doi.org/10.1098/rspb.2020.0575
 
 # Load all required packages
 
